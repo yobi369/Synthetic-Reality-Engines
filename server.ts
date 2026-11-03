@@ -80,6 +80,7 @@ app.post('/api/runs/:id/interventions', requireUser, async (req, res) => {
 });
 // AI Chronicler Endpoint: Generates a rich lore chronicle of the synthetic world
 app.post('/api/chronicler', async (req, res) => {
+  if (!rateLimit('chronicler:' + (req.ip || 'unknown'), 20)) return res.status(429).json({ success: false, error: 'Rate limit exceeded.' });
   try {
     const { worldName, epoch, population, factions, topEvents, economicStats, userPrompt } = req.body;
     const ai = getGeminiClient();
@@ -156,6 +157,7 @@ Return JSON with format:
 
 // Agent Thought Interceptor / Neural Spark endpoint
 app.post('/api/agent-thought', async (req, res) => {
+  if (!rateLimit('agent-thought:' + (req.ip || 'unknown'), 40)) return res.status(429).json({ success: false, error: 'Rate limit exceeded.' });
   try {
     const { agent, surroundings, recentMemory } = req.body;
     const ai = getGeminiClient();
