@@ -64,7 +64,7 @@ export const hashToken = (token: string) => createHash('sha256').update(token).d
 
 export async function registerUser(emailInput: string, password: string): Promise<UserRecord> {
   const email = normalizeEmail(emailInput);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Enter a valid email address.');
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Enter a valid email address.');
   if (password.length < 12 || password.length > 256) throw new Error('Password must be 12–256 characters.');
   return mutate(async store => {
     if (store.users.some(user => user.email === email)) throw new Error('An account with this email already exists.');
