@@ -407,6 +407,7 @@ def main():
                 raise AssertionError(f"{encoding} {name} mismatch: Python={actual}, TypeScript={expected}")
         verified.append({
             "encoding": encoding,
+            "selectedParameters": params,
             "calibrationRmse": train_metric,
             "holdoutRmse": holdout_metric,
             "holdoutMae": holdout_mae,
