@@ -80,9 +80,10 @@ export function parseLteeAssays(csv: string): RawLteeAssay[] {
     const ancestor0 = redIsEvolved ? white0 : red0;
     const evolved1 = redIsEvolved ? red1 : white1;
     const ancestor1 = redIsEvolved ? white1 : red1;
-    const values = [generation, replicate, evolved0, ancestor0, evolved1, ancestor1, dilution0, dilution1];
-    if (!population || values.some(value => !Number.isFinite(value) || value <= 0) ||
-        generation < 0 || !Number.isInteger(replicate)) {
+    const countsAndDilutions = [evolved0, ancestor0, evolved1, ancestor1, dilution0, dilution1];
+    if (!population || !Number.isFinite(generation) || generation < 0 ||
+        !Number.isInteger(replicate) || replicate < 1 ||
+        countsAndDilutions.some(value => !Number.isFinite(value) || value <= 0)) {
       throw new Error(`Invalid LTEE competition row at CSV line ${offset + 2}`);
     }
 
