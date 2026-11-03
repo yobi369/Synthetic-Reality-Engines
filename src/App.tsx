@@ -10,6 +10,7 @@ import {
   WeatherType
 } from './types/simulation';
 import { Header, AppViewType } from './components/Header';
+import { AccountPanel } from './components/AccountPanel';
 import { SimulationCanvas } from './components/SimulationCanvas';
 import { AgentInspector } from './components/AgentInspector';
 import { ObservabilityDashboard } from './components/ObservabilityDashboard';
@@ -28,6 +29,7 @@ export default function App() {
   // Seed is visible and user-selectable for repeatable experiment runs.
   const [seedInput, setSeedInput] = useState<string>(() => String(Date.now() >>> 0));
   const engineRef = useRef<SimulationEngine>(new SimulationEngine('civilization', Number(seedInput)));
+  const runIdRef = useRef<string>(`run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
 
   // UI Reactive States
   const [currentPreset, setCurrentPreset] = useState<WorldPresetId>('civilization');
@@ -413,6 +415,30 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-sky-500 selection:text-black">
+      <AccountPanel
+        currentRun={{
+          id: runIdRef.current,
+          name: `${engineRef.current.config.name} · seed ${engineRef.current.seed}`,
+          preset: engineRef.current.config.presetId,
+          seed: engineRef.current.seed,
+          tick: engineRef.current.tick,
+          snapshot: engineRef.current.createFullSnapshot()
+        }}
+        onRestore={(run) => {
+          const restored = new SimulationEngine(run.preset as WorldPresetId, run.seed);
+          restored.restoreRunSnapshot(run.snapshot as TimelineFork['snapshotState'], run.seed, run.preset as WorldPresetId);
+          restored.isRunning = false;
+          engineRef.current = restored;
+          runIdRef.current = run.id;
+          setCurrentPreset(run.preset as WorldPresetId);
+          setSeedInput(String(run.seed));
+          setIsRunning(false);
+          setSelectedAgentId(null);
+          prevEpochRef.current = restored.epoch;
+          syncStateFromEngine();
+        }}
+      />
+
       
       {/* Top Command Header */}
       <Header
