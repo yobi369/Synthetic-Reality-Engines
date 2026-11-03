@@ -1611,8 +1611,13 @@ export class SimulationEngine {
     for (const key of requiredArrays) {
       if (!Array.isArray((snapshot as any)[key])) throw new Error(`Invalid snapshot: ${key} must be an array.`);
     }
-    if (!snapshot.config || snapshot.config.presetId !== presetId || !snapshot.marketPrices || !snapshot.weather) {
+    if (!snapshot.config || snapshot.config.presetId !== presetId || !snapshot.marketPrices || !snapshot.weather ||
+        !Number.isFinite(snapshot.config.width) || snapshot.config.width <= 0 || !Number.isFinite(snapshot.config.height) || snapshot.config.height <= 0 ||
+        !Number.isSafeInteger(snapshot.config.maxAgents) || snapshot.config.maxAgents < 1 || snapshot.agents.length > snapshot.config.maxAgents) {
       throw new Error('Snapshot preset or required world state is invalid.');
+    }
+    if (snapshot.counters && Object.values(snapshot.counters).some(value => !Number.isSafeInteger(value) || value < 1)) {
+      throw new Error('Snapshot engine counters are invalid.');
     }
     this.initialSeed = seed >>> 0;
     this.randomState = Number.isInteger(snapshot.randomState) ? snapshot.randomState! >>> 0 : this.initialSeed;
