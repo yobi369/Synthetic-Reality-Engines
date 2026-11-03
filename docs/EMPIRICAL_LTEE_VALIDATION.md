@@ -42,6 +42,42 @@ Protocol:
 
 The script prints machine-readable JSON including source citation, row counts, cutoffs, selected parameters, all candidate metrics, bootstrap intervals and per-population errors. Its bootstrap interval quantifies variation across the 12 population clusters for the fitted curves; it is not a full parameter uncertainty interval and does not correct for every source of experimental measurement error.
 
+
+## First benchmark execution
+
+The benchmark command was added to CI and completed successfully on commit `fe0a5b029d5f766ca8af05a5a22abe158f3856e7` (typecheck, tests, empirical benchmark and production build all passed). The pinned dataset file's Git blob SHA is `919b048da2a461a267f58050078f6083b8fc88bc`.
+
+The initial run produced the following metrics. RMSE and MAE are in relative-fitness units.
+
+| Candidate | Calibration RMSE | Holdout RMSE | Holdout MAE | Population-cluster bootstrap 95% interval for holdout RMSE |
+|---|---:|---:|---:|---:|
+| Constant baseline | 0.481220 | 0.661943 | 0.642050 | [0.591305, 0.728614] |
+| Power law | **0.102984** | 0.155534 | 0.127620 | [0.128091, 0.186032] |
+| Saturating | 0.107625 | **0.149893** | **0.111413** | [0.109036, 0.190535] |
+
+Calibration selects the power-law candidate, but the saturating curve has a slightly lower temporal holdout RMSE (difference 0.005641) and MAE. The two population-cluster bootstrap intervals overlap substantially. This run therefore does not establish a clear predictive winner between the two non-constant curves. It does show that both adaptation curves outperform the constant ancestral baseline on this split, while the small holdout difference between power-law and saturating fits is uncertain.
+
+Per-population holdout RMSE for the calibration-selected power-law curve:
+
+| LTEE population | Holdout points | RMSE |
+|---|---:|---:|
+| Ara - 1 | 5 | 0.102926 |
+| Ara - 2 | 3 | 0.146860 |
+| Ara - 3 | 4 | 0.129442 |
+| Ara - 4 | 5 | 0.128020 |
+| Ara - 5 | 5 | 0.113374 |
+| Ara - 6 | 5 | 0.160365 |
+| Ara + 1 | 5 | 0.255569 |
+| Ara + 2 | 5 | 0.196622 |
+| Ara + 3 | 5 | 0.138377 |
+| Ara + 4 | 5 | 0.157452 |
+| Ara + 5 | 5 | 0.145434 |
+| Ara + 6 | 2 | 0.027304 |
+
+The uneven holdout sample sizes reflect the source experiment's truncated and unequal time series. Ara + 1 and Ara + 2 have noticeably larger errors than several other populations, so pooled performance should not be treated as uniform across replicates.
+
+These values are a first reference-curve benchmark, not validation of the Synthetic Reality Engine's microbial preset. The curve parameters were fit to aggregated LTEE observations; they are not engine parameters. The bootstrap intervals resample population clusters with the fitted curves held fixed, so they do not include parameter-estimation uncertainty.
+
 ## Interpretation rules
 
 - A curve winning on calibration data is not automatically considered scientifically superior. Its temporal holdout metrics and per-population errors must also be inspected.
