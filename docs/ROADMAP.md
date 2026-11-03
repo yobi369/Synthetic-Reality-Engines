@@ -48,3 +48,13 @@ This roadmap distinguishes existing prototype capabilities from work still requi
 ## Release gates
 
 A research release requires reproducible seeded runs, validated export/import, documented model assumptions, automated invariants and repeatable benchmark results. A production hosted release additionally requires security controls, operational monitoring, persistence strategy and deployment acceptance testing.
+
+
+## Persistence tranche status
+
+- [x] Versioned portable run export/import with state validation and deterministic continuation.
+- [x] Best-effort browser local-storage recovery.
+- [x] Preset initialization smoke coverage for the five built-in worlds.
+- [ ] Cloud persistence, multi-user access controls, and server-side retention.
+- [ ] Schema migration framework beyond the current version-one compatibility path.
+- [ ] Scientific validation and benchmark baselines for emergent behavior.
