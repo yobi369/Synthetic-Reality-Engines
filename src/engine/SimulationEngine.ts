@@ -125,6 +125,8 @@ export class SimulationEngine {
   public reset(presetId: WorldPresetId, seed: number = this.initialSeed) {
     this.initialSeed = seed >>> 0;
     this.randomState = this.initialSeed;
+    this.nextAgentId = 1; this.nextLogId = 1; this.nextDialogueId = 1;
+    this.nextAnomalyId = 1; this.nextLawId = 1; this.nextForkId = 1; this.nextCladeId = 1;
     const preset = WORLD_PRESETS[presetId] || WORLD_PRESETS.civilization;
     this.config = { ...preset.config };
     this.factions = JSON.parse(JSON.stringify(preset.factions));
