@@ -201,7 +201,7 @@ export function runLteeValidation(csv: string) {
       observationsWithFitness: raw.length,
       aggregatedPopulationGenerationPoints: points.length,
       populations: new Set(points.map(point => point.population)).size,
-      missingFitnessRowsExcluded: 6
+      missingFitnessRowsExcluded: csv.trim().split(/\\r?\\n/).length - 1 - raw.length
     },
     protocol: {
       split: 'Within each population, earliest 80% of its observed generation range for calibration; latest 20% held out.',
