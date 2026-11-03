@@ -173,6 +173,62 @@ export function bootstrapPopulationRmse(
   };
 }
 
+
+export function bootstrapCalibrationUncertainty(
+  train: FitnessPoint[],
+  seed = 20261104,
+  iterations = 250
+) {
+  const byPopulation = new Map<string, FitnessPoint[]>();
+  for (const point of train) {
+    const rows = byPopulation.get(point.population) ?? [];
+    rows.push(point);
+    byPopulation.set(point.population, rows);
+  }
+  const populations = [...byPopulation.keys()];
+  if (populations.length < 2) throw new Error('At least two calibration populations are required');
+  const random = seededRandom(seed);
+  const parameterSamples = new Map<string, Record<string, number>[]>();
+  const wins: Record<string, number> = { baseline: 0, 'power-law': 0, saturating: 0 };
+
+  for (let iteration = 0; iteration < iterations; iteration++) {
+    const sample: FitnessPoint[] = [];
+    for (let draw = 0; draw < populations.length; draw++) {
+      const cluster = byPopulation.get(populations[Math.floor(random() * populations.length)])!;
+      sample.push(...cluster);
+    }
+    const candidates = fitCandidateModels(sample).sort((a, b) => a.trainRmse - b.trainRmse);
+    wins[candidates[0].name]++;
+    for (const model of candidates) {
+      const values = parameterSamples.get(model.name) ?? [];
+      values.push(model.parameters);
+      parameterSamples.set(model.name, values);
+    }
+  }
+
+  const quantile = (values: number[], probability: number) => {
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.min(sorted.length - 1, Math.floor(probability * sorted.length))];
+  };
+  const intervals: Record<string, Record<string, [number, number]>> = {};
+  for (const [name, samples] of parameterSamples) {
+    const keys = Object.keys(samples[0]);
+    intervals[name] = {};
+    for (const key of keys) {
+      const values = samples.map(sample => sample[key]);
+      intervals[name][key] = [quantile(values, 0.025), quantile(values, 0.975)];
+    }
+  }
+  return {
+    iterations,
+    seed,
+    modelSelectionFrequency: Object.fromEntries(
+      Object.entries(wins).map(([name, count]) => [name, Number((count / iterations).toFixed(4))])
+    ),
+    conditionalParameterIntervals95: intervals
+  };
+}
+
 export function runLteeValidation(csv: string) {
   const raw = parseFitnessCsv(csv);
   const points = aggregateReplicates(raw);
@@ -212,6 +268,7 @@ export function runLteeValidation(csv: string) {
     },
     selectedModel: selected.name,
     selectedParameters: selected.parameters,
+    calibrationUncertainty: bootstrapCalibrationUncertainty(split.train),
     holdoutMetrics: holdout,
     perPopulationHoldout: byPopulation,
     cutoffsByPopulation: split.cutoffs
