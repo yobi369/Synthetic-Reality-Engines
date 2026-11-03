@@ -109,6 +109,73 @@ The uneven holdout sample sizes reflect the source experiment's truncated and un
 
 These values are a first reference-curve benchmark, not validation of the Synthetic Reality Engine's microbial preset. The curve parameters were fit to aggregated LTEE observations; they are not engine parameters. The holdout bootstrap intervals resample population clusters with fitted curves held fixed. A separate calibration cluster bootstrap now refits the candidate curves and reports conditional parameter intervals and model-selection frequencies; it still does not represent uncertainty over unconsidered model families.
 
+
+## Mechanistic LTEE calibration and holdout results
+
+<badge color="success">CI and independent Python replay passed</badge>
+
+The first mechanistic evaluation was run on commit `052073812a87753efbc35dd8705217f80e0d7343`, using the expanded 100-point grid and the six complete non-mutator populations. The source CSV SHA-256 was `d9a4802fcad75188a0e1b85bfae5cd3b8c3bdca4990dc3893bc5dab42df2115b`.
+
+### Primary W-statistic comparison
+
+All models below use the same six populations, the same within-population 80/20 temporal split and equal population weighting. Lower RMSE/MAE is better.
+
+| Model | Calibration RMSE | Holdout RMSE | Holdout MAE |
+|---|---:|---:|---:|
+| LTEE forward model | **0.101346** | 0.139487 | 0.119350 |
+| Power-law curve | 0.102797 | 0.151073 | 0.123481 |
+| Saturating curve | 0.107950 | **0.139277** | **0.118548** |
+| Constant baseline | 0.473050 | 0.645969 | 0.637525 |
+
+The mechanistic model improves calibration RMSE over both simple adaptation curves and generalizes better than the power law on this split. The saturating curve has a marginally lower holdout RMSE (difference 0.000210) and MAE (difference 0.000802). These differences are negligible relative to the uncertainty: the mechanistic model's 1,000-resample population-cluster bootstrap 95% interval for holdout RMSE is [0.085209, 0.236418]. The current evidence supports comparable predictive performance to the saturating curve, not a decisive mechanistic-model advantage.
+
+### Selected parameters and calibration sensitivity
+
+The primary W-statistic fit selected:
+
+- Beneficial mutation rate per computational cell per generation: (1.0\times10^{-8})
+- Mean beneficial selection effect: (0.06)
+- Diminishing-returns coefficient: (6)
+- Transfer bottleneck: 5,000,000 cells, represented by a capped aggregate fitness-class model (64 classes maximum)
+
+In 250 calibration-cluster bootstrap resamples, the exact selected combination recurred in 80% of resamples. Most remaining selections retained the same mean effect and diminishing-returns coefficient but varied the mutation-rate grid value. The profile RMSE was lowest at mutation rate (10^{-8}), mean effect 0.06 and diminishing returns 6. The selected point is interior to the expanded grid on all three fitted dimensions; the initial grid's boundary problem was resolved by expanding the search using calibration-only profile information.
+
+This is useful parameter stability, but not proof of unique biological identification. Mutation supply and effect size remain partially confounded, and the parameters should be interpreted as effective model parameters under this coarse-grained representation—not direct laboratory estimates of per-cell mutation biology.
+
+### Fitness-encoding sensitivity
+
+The same selected parameter combination was preferred under all five encodings in this run.
+
+| Encoding | Calibration RMSE | Holdout RMSE |
+|---|---:|---:|
+| Original LTEE W statistic | 0.101346 | 0.139487 |
+| Logit per generation | 0.101346 | 0.139487 |
+| Logit per cycle | 0.344719 | 0.414023 |
+| Log per cycle | 0.091928 | 0.110268 |
+| Log per generation | 0.026632 | 0.037983 |
+
+These RMSE magnitudes are in different units and must not be ranked directly across encodings. The original W statistic and logit-per-generation values are mathematically equivalent up to the affine transformation (W=1+s_{\mathrm{gen}}^{\mathrm{logit}}); their matching results are expected, not independent confirmation. The cycle and log encodings provide the meaningful sensitivity comparison.
+
+### Per-population W-statistic holdout RMSE
+
+| Population | Holdout points | RMSE |
+|---|---:|---:|
+| Ara - 5 | 5 | 0.070079 |
+| Ara - 6 | 5 | 0.070063 |
+| Ara + 1 | 5 | 0.116619 |
+| Ara + 2 | 5 | 0.310091 |
+| Ara + 4 | 5 | 0.168473 |
+| Ara + 5 | 5 | 0.101595 |
+
+Ara + 2 remains a clear weak point. The pooled result must not hide this population-level discrepancy. A model extension should be motivated by biological evidence and assessed using a newly preregistered holdout—not tuned against this already inspected test set.
+
+### Independent computational reproduction
+
+The Python standard-library reference implementation independently replayed all five selected parameter sets and reproduced the TypeScript calibration RMSE, holdout RMSE, holdout MAE and cluster-bootstrap bounds within (2\times10^{-7}). The check is part of CI and the machine-readable report is uploaded as a workflow artifact.
+
+This verifies cross-language computational reproducibility of the selected fits. It does not independently repeat the 100-point parameter search or constitute external researcher replication. External review remains tracked in [issue #2](https://github.com/yobi369/Synthetic-Reality-Engines/issues/2).
+
+
 ## Interpretation rules
 
 - A curve winning on calibration data is not automatically considered scientifically superior. Its temporal holdout metrics and per-population errors must also be inspected.
