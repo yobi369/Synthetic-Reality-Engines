@@ -38,7 +38,8 @@ Protocol:
    - saturating curve: F(g)=1+a g/(1+cg), with a,c>=0 and c selected on a fixed grid.
 5. Select the candidate with lowest calibration RMSE. Report calibration RMSE, temporal-holdout RMSE and MAE for every candidate, not just the selected curve.
 6. Estimate 95% intervals for holdout RMSE by 1,000 deterministic cluster-bootstrap resamples of populations. This preserves within-population temporal dependence better than resampling individual rows.
-7. Report per-population holdout errors so a good pooled score cannot conceal a failed replicate population.
+7. Separately bootstrap the calibration populations 250 times, refitting all candidate families on each resample. Report model-selection frequencies and conditional parameter intervals; these intervals are conditional on each curve family and do not represent uncertainty over all possible model structures.
+8. Report per-population holdout errors so a good pooled score cannot conceal a failed replicate population.
 
 The script prints machine-readable JSON including source citation, row counts, cutoffs, selected parameters, all candidate metrics, bootstrap intervals and per-population errors. Its bootstrap interval quantifies variation across the 12 population clusters for the fitted curves; it is not a full parameter uncertainty interval and does not correct for every source of experimental measurement error.
 
@@ -76,7 +77,7 @@ Per-population holdout RMSE for the calibration-selected power-law curve:
 
 The uneven holdout sample sizes reflect the source experiment's truncated and unequal time series. Ara + 1 and Ara + 2 have noticeably larger errors than several other populations, so pooled performance should not be treated as uniform across replicates.
 
-These values are a first reference-curve benchmark, not validation of the Synthetic Reality Engine's microbial preset. The curve parameters were fit to aggregated LTEE observations; they are not engine parameters. The bootstrap intervals resample population clusters with the fitted curves held fixed, so they do not include parameter-estimation uncertainty.
+These values are a first reference-curve benchmark, not validation of the Synthetic Reality Engine's microbial preset. The curve parameters were fit to aggregated LTEE observations; they are not engine parameters. The holdout bootstrap intervals resample population clusters with fitted curves held fixed. A separate calibration cluster bootstrap now refits the candidate curves and reports conditional parameter intervals and model-selection frequencies; it still does not represent uncertainty over unconsidered model families.
 
 ## Interpretation rules
 
