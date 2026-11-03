@@ -249,6 +249,10 @@ export interface TimelineFork {
     laws: WorldLaw[];
     clades: SpeciesClade[];
     anomalies: CosmicAnomaly[];
+    disasters: DisasterEvent[];
+    dialogues: AgentDialogue[];
+    logs: WorldLog[];
+    history: HistoryDataPoint[];
     config: WorldConfig;
     weather?: WeatherState;
     /** PRNG state captured so a restored fork continues its exact random stream. */
