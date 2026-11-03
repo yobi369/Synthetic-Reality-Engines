@@ -18,7 +18,8 @@ import {
   TimelineFork,
   CosmicToolType,
   WeatherState,
-  WeatherType
+  WeatherType,
+  InterventionEvent
 } from '../types/simulation';
 import { WORLD_PRESETS } from './presets';
 import { audioEngine } from './AudioSynthesizer';
@@ -40,6 +41,7 @@ export class SimulationEngine {
   public weather: WeatherState;
   public logs: WorldLog[] = [];
   public history: HistoryDataPoint[] = [];
+  public interventions: InterventionEvent[] = [];
 
   public tick: number = 0;
   public epoch: number = 1;
@@ -134,6 +136,7 @@ export class SimulationEngine {
     this.agents = [];
     this.logs = [];
     this.history = [];
+    this.interventions = [];
     this.tick = 0;
     this.epoch = 1;
     this.activeForkId = 'fork_prime';
@@ -1629,6 +1632,7 @@ export class SimulationEngine {
     this.dialogues = structuredClone(snapshot.dialogues ?? []);
     this.logs = structuredClone(snapshot.logs ?? []);
     this.history = structuredClone(snapshot.history ?? []);
+    this.interventions = structuredClone(snapshot.interventions ?? []);
     this.config = structuredClone(snapshot.config);
     this.weather = structuredClone(snapshot.weather);
     this.activeForkId = 'fork_prime';
@@ -1639,10 +1643,24 @@ export class SimulationEngine {
     }];
   }
 
+  public recordIntervention(action: string, parameters: Record<string, unknown> = {}): InterventionEvent {
+    const event: InterventionEvent = {
+      id: `intervention_${this.tick}_${this.interventions.length + 1}`,
+      tick: this.tick, epoch: this.epoch, action,
+      parameters: structuredClone(parameters), recordedAt: new Date().toISOString()
+    };
+    this.interventions.push(event);
+    return event;
+  }
   public createFullSnapshot(): TimelineFork['snapshotState'] {
     return {
       tick: this.tick,
       epoch: this.epoch,
+      interventions: structuredClone(this.interventions),
+      disasters: structuredClone(this.disasters),
+      dialogues: structuredClone(this.dialogues),
+      logs: structuredClone(this.logs),
+      history: structuredClone(this.history),
       agents: JSON.parse(JSON.stringify(this.agents)),
       factions: JSON.parse(JSON.stringify(this.factions)),
       resources: JSON.parse(JSON.stringify(this.resources)),
