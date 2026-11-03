@@ -1059,6 +1059,10 @@ export class SimulationEngine {
       x: (a1.x + a2.x) / 2,
       y: Math.min(a1.y, a2.y) - 24,
       tick: this.tick,
+      disasters: structuredClone(this.disasters),
+      dialogues: structuredClone(this.dialogues),
+      logs: structuredClone(this.logs),
+      history: structuredClone(this.history),
       duration: 70
     };
   }
@@ -1597,6 +1601,44 @@ export class SimulationEngine {
   }
 
   // MULTIVERSE TIME LOOM FORKING & JUMPING
+  public restoreRunSnapshot(snapshot: TimelineFork['snapshotState'], seed: number, presetId: WorldPresetId): void {
+    if (!Number.isSafeInteger(seed) || seed < 0 || seed > 0xffffffff) throw new Error('Invalid run seed.');
+    if (!snapshot || !Number.isSafeInteger(snapshot.tick) || snapshot.tick < 0 || !Number.isSafeInteger(snapshot.epoch) || snapshot.epoch < 1) {
+      throw new Error('Invalid simulation snapshot metadata.');
+    }
+    const requiredArrays = ['agents', 'factions', 'resources', 'buildings', 'laws', 'clades', 'anomalies', 'disasters', 'dialogues', 'logs', 'history'];
+    for (const key of requiredArrays) {
+      if (!Array.isArray((snapshot as any)[key])) throw new Error(`Invalid snapshot: ${key} must be an array.`);
+    }
+    if (!snapshot.config || snapshot.config.presetId !== presetId || !snapshot.marketPrices || !snapshot.weather) {
+      throw new Error('Snapshot preset or required world state is invalid.');
+    }
+    this.initialSeed = seed >>> 0;
+    this.randomState = Number.isInteger(snapshot.randomState) ? snapshot.randomState! >>> 0 : this.initialSeed;
+    this.tick = snapshot.tick;
+    this.epoch = snapshot.epoch;
+    this.agents = structuredClone(snapshot.agents);
+    this.factions = structuredClone(snapshot.factions);
+    this.resources = structuredClone(snapshot.resources);
+    this.buildings = structuredClone(snapshot.buildings);
+    this.marketPrices = structuredClone(snapshot.marketPrices);
+    this.laws = structuredClone(snapshot.laws);
+    this.clades = structuredClone(snapshot.clades);
+    this.anomalies = structuredClone(snapshot.anomalies);
+    this.disasters = structuredClone(snapshot.disasters);
+    this.dialogues = structuredClone(snapshot.dialogues);
+    this.logs = structuredClone(snapshot.logs);
+    this.history = structuredClone(snapshot.history);
+    this.config = structuredClone(snapshot.config);
+    this.weather = structuredClone(snapshot.weather);
+    this.activeForkId = 'fork_prime';
+    this.timelineForks = [{
+      id: 'fork_prime', name: 'Imported Run', description: 'Restored from a run snapshot.',
+      createdAtTick: 0, createdAtEpoch: 1, divergenceFactor: 0, color: '#38bdf8',
+      active: true, snapshotState: this.createFullSnapshot()
+    }];
+  }
+
   public createFullSnapshot(): TimelineFork['snapshotState'] {
     return {
       tick: this.tick,
