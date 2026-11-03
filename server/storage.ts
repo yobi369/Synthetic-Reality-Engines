@@ -134,7 +134,10 @@ export async function deleteRun(ownerId: string, runId: string): Promise<boolean
   });
 }
 export async function appendIntervention(record: InterventionRecord): Promise<void> {
-  await mutate(store => { store.interventions.push(record); });
+  await mutate(store => {
+    const duplicate = store.interventions.some(item => item.ownerId === record.ownerId && item.runId === record.runId && item.id === record.id);
+    if (!duplicate) store.interventions.push(record);
+  });
 }
 export async function listInterventions(ownerId: string, runId: string): Promise<InterventionRecord[]> {
   const store = await readStore();
