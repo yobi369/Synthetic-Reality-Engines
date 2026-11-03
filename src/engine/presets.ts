@@ -332,14 +332,14 @@ export const WORLD_PRESETS: Record<WorldPresetId, WorldPresetData> = {
   microbial: {
     id: 'microbial',
     name: 'Microbial Life & Speciation Matrix',
-    subtitle: 'Gene Alleles, Predator/Prey & Natural Selection',
-    tagline: 'Simulate evolutionary biology: cellular organisms replicate, mutate speeds and metabolism, develop specialized traits, and form emergent food webs.',
+    subtitle: 'Exploratory agent ecology — scientifically unvalidated',
+    tagline: 'Research prototype only: explore emergent mutation, reproduction and food-web behaviour. This preset is not calibrated to LTEE data or validated against real microbial populations.',
     icon: 'Dna',
-    description: 'Autonomous single-cell lifeforms consuming nutrient broth, mutating genomic parameters across generations, with speciation into photosynthetic grazers and rapid carnivores.',
+    description: 'UNVALIDATED RESEARCH PROTOTYPE. Abstract single-cell agents consume resources, mutate simulation traits and interact as an emergent food web. Not an LTEE model; do not interpret outputs as empirical microbial predictions.',
     config: {
       name: 'Primordial Hydrothermal Vents',
       presetId: 'microbial',
-      description: 'A nutrient-rich microscopic fluid medium where natural selection and genetic mutations drive speciation.',
+      description: 'Unvalidated abstract microbial-style sandbox. It does not implement experimentally faithful LTEE serial transfer, competition assays or calibrated genotype-to-fitness mapping.',
       width: 1200,
       height: 750,
       friction: 0.94,
