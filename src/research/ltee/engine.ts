@@ -26,7 +26,7 @@ export const DEFAULT_LTEE_PARAMETERS: LteeModelParameters = {
   beneficialMutationRate: 0.000003,
   meanBeneficialEffect: 0.025,
   diminishingReturns: 1,
-  effectiveBottleneck: 5000,
+  effectiveBottleneck: 5_000_000,
   maxFitnessClasses: 64
 };
 
