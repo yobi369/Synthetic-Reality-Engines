@@ -212,7 +212,7 @@ Return JSON:
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
-  try { res.json({ status: 'ok', engine: 'Synthetic Reality Engine', storage: await storageHealth() }); } catch { res.status(503).json({ status: 'degraded', storage: 'unavailable' }); }
+  try { await storageHealth(); res.json({ status: 'ok', engine: 'Synthetic Reality Engine', storage: 'ready' }); } catch { res.status(503).json({ status: 'degraded', storage: 'unavailable' }); }
 });
 
 // In production, serve the static frontend
