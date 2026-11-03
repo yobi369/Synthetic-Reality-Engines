@@ -53,7 +53,7 @@ The current engine uses ambient randomness in agent behaviour and other simulati
 - timeline snapshots are not durable archives;
 - comparing two runs does not constitute a controlled experiment.
 
-A future deterministic design should inject a versioned PRNG into the engine, persist its state in snapshots, and record configuration, engine version, seed and intervention events in a run manifest.
+Next steps are to expose seed selection in the UI, version the PRNG/run format, and record configuration, engine version, seed and intervention events in a run manifest.
 
 ## Scientific interpretation
 
@@ -62,7 +62,7 @@ The engine is an artificial-world sandbox. A plausible-looking emergent pattern 
 ## Recommended future boundaries
 
 1. Extract pure domain rules from the UI and isolate side effects behind interfaces.
-2. Add seeded randomness and schema-versioned serialisation.
+2. Add a versioned run manifest, user-selectable seed, and schema-versioned serialization.
 3. Build invariant/property tests for state transitions and resource accounting.
 4. Add benchmark scenarios and population scaling measurements.
 5. Separate API implementation from Vite middleware and apply production request controls.
