@@ -78,6 +78,7 @@ export async function registerUser(emailInput: string, password: string): Promis
 
 export async function authenticateUser(emailInput: string, password: string): Promise<UserRecord | null> {
   const email = normalizeEmail(emailInput);
+  if (email.length > 254 || password.length > 256) return null;
   const store = await readStore();
   const user = store.users.find(item => item.email === email);
   if (!user) { await scrypt(password, Buffer.alloc(16), 64); return null; }
