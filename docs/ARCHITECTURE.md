@@ -67,3 +67,10 @@ The engine is an artificial-world sandbox. A plausible-looking emergent pattern 
 4. Add benchmark scenarios and population scaling measurements.
 5. Separate API implementation from Vite middleware and apply production request controls.
 6. Add experiment manifests, replayable interventions and export/import validation.
+
+
+## Snapshot persistence
+
+The browser run format is versioned JSON. It contains the seed, preset, engine snapshot, and run metadata. Import validates metadata and required state collections before replacing the active engine. The engine snapshot captures world entities, configuration, weather, logs/history, and PRNG state. Legacy version-one exports without the later optional log/history collections are accepted with empty collections.
+
+The UI also writes periodic snapshots to browser local storage. This is best-effort single-browser recovery, not durable server storage: storage may be cleared, quota-limited, or unavailable. Portable exports remain the recommended backup. No account, synchronization, encryption-at-rest, or server-side run repository is implemented.
