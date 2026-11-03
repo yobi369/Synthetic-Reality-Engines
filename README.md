@@ -79,3 +79,11 @@ Contributions should include a clear problem statement, a focused change, tests 
 ## License
 
 No license is currently declared. Unless a license is added, standard copyright restrictions apply; do not assume the code is open for reuse or redistribution.
+
+
+## Run persistence
+
+- Export a run as a versioned JSON snapshot and import it later from the experiment controls.
+- The browser periodically autosaves the latest simulation state to local storage and attempts to restore it on the next visit.
+- Snapshot restoration validates core state and restores the PRNG stream so continued simulation can be reproducible.
+- Browser storage is local to the browser profile and may be cleared or quota-limited. Keep exported JSON files as portable backups; this is not cloud or multi-user persistence.
