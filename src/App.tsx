@@ -151,6 +151,30 @@ export default function App() {
     syncStateFromEngine();
   };
 
+  const handleExportRun = () => {
+    const engine = engineRef.current;
+    const run = {
+      format: "synthetic-reality-run",
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      engineVersion: "0.1.0",
+      seed: engine.seed,
+      preset: currentPreset,
+      tick: engine.tick,
+      epoch: engine.epoch,
+      config: engine.config,
+      snapshot: engine.createFullSnapshot(),
+      logs: engine.logs
+    };
+    const blob = new Blob([JSON.stringify(run, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `synthetic-reality-${currentPreset}-seed-${engine.seed}-tick-${engine.tick}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleApplySeed = () => {
     const parsed = Number(seedInput);
     if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > 0xffffffff) return;
