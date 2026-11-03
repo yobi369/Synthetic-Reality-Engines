@@ -56,6 +56,8 @@ export class SimulationEngine {
     return this.initialSeed;
   }
 
+  public sampleRandom(): number { return this.random(); }
+
   private random(): number {
     let value = (this.randomState += 0x6D2B79F5);
     value = Math.imul(value ^ (value >>> 15), value | 1);
