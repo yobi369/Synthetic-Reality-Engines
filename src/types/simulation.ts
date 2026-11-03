@@ -247,6 +247,7 @@ export interface TimelineFork {
     tick: number;
     epoch: number;
     interventions?: InterventionEvent[];
+    counters?: { nextAgentId: number; nextLogId: number; nextDialogueId: number; nextAnomalyId: number; nextLawId: number; nextForkId: number; nextCladeId: number };
     agents: Agent[];
     factions: Faction[];
     resources: ResourceNode[];
