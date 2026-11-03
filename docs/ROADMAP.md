@@ -27,7 +27,8 @@ This roadmap distinguishes verified implementation work from remaining operation
 - [x] Add repeatable multi-preset, multi-seed performance benchmark runner.
 - [ ] Add full run manifests including immutable source revision and complete execution environment.
 - [ ] Add batch runs, sensitivity analysis and confidence intervals.
-- [ ] Select a domain-specific empirical dataset and complete independent validation.
+- [x] Select and pin the LTEE public reference dataset; implement a reproducible, per-population temporal holdout benchmark for published adaptation-curve families.
+- [ ] Independently reproduce the benchmark and connect the engine to an experimentally faithful, calibrated microbial subsystem before making engine-level scientific claims.
 
 ## Stage 4 — Performance and scale
 
