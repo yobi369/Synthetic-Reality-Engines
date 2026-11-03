@@ -30,6 +30,7 @@ This roadmap distinguishes verified implementation work from remaining operation
 - [x] Select and pin the LTEE public reference dataset; implement a reproducible, per-population temporal holdout benchmark for published adaptation-curve families.
 - [x] Implement a separate LTEE forward-time subsystem with heritable selection coefficients, beneficial mutation, diminishing-returns effects, daily 1:100 serial transfer and ancestor competition assays.
 - [x] Calibrate on six complete non-mutator populations and evaluate a pre-held temporal test split; compare five fitness encodings and profile parameter sensitivity.
+- [x] Add a separately implemented Python reference replay that independently recalculates the selected parameter sets and calibration/holdout metrics in CI.
 - [ ] Obtain external independent researcher reproduction and review before claiming independent scientific replication.
 - [ ] Connect the generic agent-based microbial preset only after a defensible genotype/resource/fitness mapping and separate acceptance study.
 
