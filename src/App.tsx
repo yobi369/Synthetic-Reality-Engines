@@ -57,6 +57,17 @@ export default function App() {
     setTick(engine.tick);
     setEpoch(engine.epoch);
     setPopulation(engine.agents.length);
+    if (engine.tick % 10 === 0) {
+      try {
+        localStorage.setItem('synthetic-reality:last-run', JSON.stringify({
+          format: 'synthetic-reality-run', formatVersion: 1, engineVersion: '0.1.0',
+          seed: engine.seed, preset: engine.config.presetId, tick: engine.tick, epoch: engine.epoch,
+          snapshot: engine.createFullSnapshot()
+        }));
+      } catch (error) {
+        console.warn('Autosave skipped (storage unavailable or quota exceeded).', error);
+      }
+    }
 
     if (engine.epoch > prevEpochRef.current) {
       prevEpochRef.current = engine.epoch;
@@ -174,6 +185,51 @@ export default function App() {
     link.click();
     URL.revokeObjectURL(url);
   };
+
+  const handleImportRun = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const run = JSON.parse(await file.text());
+      if (run?.format !== 'synthetic-reality-run' || run?.formatVersion !== 1 ||
+          typeof run.preset !== 'string' || !run.snapshot) {
+        throw new Error('Unsupported run file. Expected Synthetic Reality Run version 1.');
+      }
+      const nextEngine = new SimulationEngine(run.preset as WorldPresetId, run.seed);
+      nextEngine.restoreRunSnapshot(run.snapshot, run.seed, run.preset as WorldPresetId);
+      engineRef.current = nextEngine;
+      setCurrentPreset(run.preset as WorldPresetId);
+      setSeedInput(String(nextEngine.seed));
+      setSelectedAgentId(null);
+      setIsRunning(false);
+      nextEngine.isRunning = false;
+      prevEpochRef.current = nextEngine.epoch;
+      syncStateFromEngine();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Could not import run file.');
+    }
+  };
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('synthetic-reality:last-run');
+      if (!saved) return;
+      const run = JSON.parse(saved);
+      if (run?.format === 'synthetic-reality-run' && run?.formatVersion === 1) {
+        const restored = new SimulationEngine(run.preset as WorldPresetId, run.seed);
+        restored.restoreRunSnapshot(run.snapshot, run.seed, run.preset as WorldPresetId);
+        restored.isRunning = true;
+        engineRef.current = restored;
+        setCurrentPreset(run.preset as WorldPresetId);
+        setSeedInput(String(restored.seed));
+        prevEpochRef.current = restored.epoch;
+        syncStateFromEngine();
+      }
+    } catch (error) {
+      console.warn('Saved run could not be restored; starting a fresh simulation.', error);
+    }
+  }, [syncStateFromEngine]);
 
   const handleApplySeed = () => {
     const parsed = Number(seedInput);
@@ -375,6 +431,11 @@ export default function App() {
             <p id="seed-help" className="mt-1 text-xs text-slate-500">Use the same seed and preset to reproduce the same engine run. Applying a seed restarts the world.</p>
           </div>
           <button type="button" onClick={handleApplySeed} disabled={seedInput.length === 0 || !Array.from(seedInput).every(char => char >= '0' && char <= '9') || !Number.isSafeInteger(Number(seedInput)) || Number(seedInput) > 0xffffffff} className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-40">Apply seed & restart</button>
+          <button type="button" onClick={handleExportRun} className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800">Export snapshot</button>
+          <label className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800 cursor-pointer">
+            Import snapshot
+            <input type="file" accept="application/json,.json" onChange={handleImportRun} className="sr-only" />
+          </label>
         </section>
         
         {/* VIEW 1: Live Interactive Reality Canvas & Cosmic Manipulator */}
