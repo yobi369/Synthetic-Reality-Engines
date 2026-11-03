@@ -265,9 +265,12 @@ function mae(points: AggregatePoint[], encoding: FitnessEncoding): number {
 }
 
 function parameterGrid(): LteeModelParameters[] {
-  const mutationRates = [0.000001, 0.000003, 0.00001];
-  const meanEffects = [0.01, 0.03, 0.06];
-  const diminishingReturns = [0, 1, 3];
+  // The initial profile hit the d=3 boundary and showed mutation-rate/effect
+  // confounding. Expand only the calibration grid; never use holdout scores.
+  // N_b=5e6 follows the scale used in published LTEE population-genetic models.
+  const mutationRates = [0.000000001, 0.000000003, 0.00000001, 0.00000003, 0.0000001];
+  const meanEffects = [0.01, 0.03, 0.06, 0.1];
+  const diminishingReturns = [0, 1, 3, 6, 10];
   return mutationRates.flatMap(beneficialMutationRate =>
     meanEffects.flatMap(meanBeneficialEffect =>
       diminishingReturns.map(diminishing => ({
@@ -409,6 +412,75 @@ function evaluateMetric(
   };
 }
 
+
+function fitReferenceCurves(train: AggregatePoint[], test: AggregatePoint[]) {
+  const populations = [...new Set(train.map(point => point.population))];
+  const perPopulationCount = new Map(populations.map(population => [
+    population, train.filter(point => point.population === population).length
+  ]));
+  const weightedAmplitude = (feature: (generation: number) => number) => {
+    let numerator = 0;
+    let denominator = 0;
+    for (const point of train) {
+      const weight = 1 / ((perPopulationCount.get(point.population) ?? 1) * populations.length);
+      const x = feature(point.generation);
+      numerator += weight * x * (point.observed['original-relative-growth-ratio'] - 1);
+      denominator += weight * x * x;
+    }
+    return denominator > 0 ? Math.max(0, numerator / denominator) : 0;
+  };
+  const score = (points: AggregatePoint[], predict: (generation: number) => number) => {
+    const rmses = [...new Set(points.map(point => point.population))].map(population => {
+      const rows = points.filter(point => point.population === population);
+      return Math.sqrt(rows.reduce((sum, point) =>
+        sum + (predict(point.generation) - point.observed['original-relative-growth-ratio']) ** 2, 0) / rows.length);
+    });
+    return rmses.reduce((sum, value) => sum + value, 0) / rmses.length;
+  };
+  const maeValue = (points: AggregatePoint[], predict: (generation: number) => number) => {
+    const perPop = [...new Set(points.map(point => point.population))].map(population => {
+      const rows = points.filter(point => point.population === population);
+      return rows.reduce((sum, point) =>
+        sum + Math.abs(predict(point.generation) - point.observed['original-relative-growth-ratio']), 0) / rows.length;
+    });
+    return perPop.reduce((sum, value) => sum + value, 0) / perPop.length;
+  };
+  const models: Array<{ name: string; parameters: Record<string, number>; predict: (generation: number) => number }> = [
+    { name: 'constant-baseline', parameters: { intercept: 1 }, predict: () => 1 }
+  ];
+  let power: typeof models[number] | undefined;
+  let powerScore = Infinity;
+  for (let exponent = 0.05; exponent <= 1.500001; exponent += 0.01) {
+    const amplitude = weightedAmplitude(generation => generation === 0 ? 0 : generation ** exponent);
+    const predict = (generation: number) => 1 + amplitude * (generation === 0 ? 0 : generation ** exponent);
+    const current = score(train, predict);
+    if (current < powerScore) {
+      powerScore = current;
+      power = { name: 'power-law', parameters: { exponent, amplitude }, predict };
+    }
+  }
+  if (power) models.push(power);
+  let saturating: typeof models[number] | undefined;
+  let saturatingScore = Infinity;
+  for (let saturation = 0; saturation <= 0.0010001; saturation += 0.000005) {
+    const amplitude = weightedAmplitude(generation => generation / (1 + saturation * generation));
+    const predict = (generation: number) => 1 + amplitude * generation / (1 + saturation * generation);
+    const current = score(train, predict);
+    if (current < saturatingScore) {
+      saturatingScore = current;
+      saturating = { name: 'saturating', parameters: { saturation, amplitude }, predict };
+    }
+  }
+  if (saturating) models.push(saturating);
+  return models.map(model => ({
+    model: model.name,
+    parameters: model.parameters,
+    calibrationRmse: score(train, model.predict),
+    holdoutRmse: score(test, model.predict),
+    holdoutMae: maeValue(test, model.predict)
+  })).sort((a, b) => a.calibrationRmse - b.calibrationRmse);
+}
+
 export function runMechanisticLteeValidation(csv: string) {
   const sourceHash = createHash('sha256').update(csv).digest('hex');
   const rawAll = parseLteeAssays(csv);
@@ -458,6 +530,7 @@ export function runMechanisticLteeValidation(csv: string) {
       grid,
       seed: 20261103
     },
+    referenceCurveComparators: fitReferenceCurves(split.train, split.test),
     metrics
   };
 }
