@@ -3,6 +3,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
+import { randomBytes } from 'node:crypto';
+import { appendIntervention, authenticateUser, createSession, deleteRun, findSession, getRun, listInterventions, listRuns, registerUser, revokeSession, saveRun, storageHealth } from './server/storage';
 
 dotenv.config();
 
