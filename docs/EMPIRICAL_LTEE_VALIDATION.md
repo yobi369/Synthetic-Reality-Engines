@@ -121,7 +121,7 @@ These values are a first reference-curve benchmark, not validation of the Synthe
 
 ## Remaining scientific gates
 
-1. Obtain a named external researcher to independently reproduce the mechanistic run and confirm data interpretation; the Python reference replay is an independent implementation but is not an external scientific review.
+1. Obtain a named external researcher to independently reproduce the mechanistic run and confirm data interpretation; the Python reference replay is an independent implementation but is not an external scientific review. The open request is tracked in [GitHub issue #2](https://github.com/yobi369/Synthetic-Reality-Engines/issues/2).
 2. Expand the fitness-encoding analysis and verify alternative encodings against the complete assay-level raw data and the current literature.
 3. Expand parameter uncertainty beyond the finite grid and evaluate sensitivity to the scaled bottleneck and model structure.
 4. Compare against independent population-genetic implementations and benchmark published power-law / two-epoch alternatives.
