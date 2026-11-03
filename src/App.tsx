@@ -25,8 +25,9 @@ import { audioEngine } from './engine/AudioSynthesizer';
 import confetti from 'canvas-confetti';
 
 export default function App() {
-  // Primary simulation engine instance in ref for 60FPS performance
-  const engineRef = useRef<SimulationEngine>(new SimulationEngine('civilization'));
+  // Seed is visible and user-selectable for repeatable experiment runs.
+  const [seedInput, setSeedInput] = useState<string>(() => String(Date.now() >>> 0));
+  const engineRef = useRef<SimulationEngine>(new SimulationEngine('civilization', Number(seedInput)));
 
   // UI Reactive States
   const [currentPreset, setCurrentPreset] = useState<WorldPresetId>('civilization');
@@ -112,7 +113,7 @@ export default function App() {
   // Handlers
   const handleSelectPreset = (presetId: WorldPresetId) => {
     setCurrentPreset(presetId);
-    engineRef.current.reset(presetId);
+    engineRef.current.reset(presetId, engineRef.current.seed);
     setSelectedAgentId(null);
     prevEpochRef.current = 1;
     syncStateFromEngine();
@@ -144,7 +145,16 @@ export default function App() {
   };
 
   const handleReset = () => {
-    engineRef.current.reset(currentPreset);
+    engineRef.current.reset(currentPreset, engineRef.current.seed);
+    setSelectedAgentId(null);
+    prevEpochRef.current = 1;
+    syncStateFromEngine();
+  };
+
+  const handleApplySeed = () => {
+    const parsed = Number(seedInput);
+    if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > 0xffffffff) return;
+    engineRef.current.reset(currentPreset, parsed);
     setSelectedAgentId(null);
     prevEpochRef.current = 1;
     syncStateFromEngine();
@@ -334,6 +344,14 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+        <section className="flex flex-col sm:flex-row sm:items-end gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+          <div className="flex-1">
+            <label htmlFor="simulation-seed" className="block text-xs font-semibold uppercase tracking-wider text-slate-400">Experiment seed (0–4,294,967,295)</label>
+            <input id="simulation-seed" inputMode="numeric" pattern="[0-9]*" value={seedInput} onChange={event => setSeedInput(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100" aria-describedby="seed-help" />
+            <p id="seed-help" className="mt-1 text-xs text-slate-500">Use the same seed and preset to reproduce the same engine run. Applying a seed restarts the world.</p>
+          </div>
+          <button type="button" onClick={handleApplySeed} disabled={!/^\\d+$/.test(seedInput) || !Number.isSafeInteger(Number(seedInput)) || Number(seedInput) > 0xffffffff} className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-40">Apply seed & restart</button>
+        </section>
         
         {/* VIEW 1: Live Interactive Reality Canvas & Cosmic Manipulator */}
         {activeView === 'canvas' && (
