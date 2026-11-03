@@ -314,8 +314,8 @@ export default function App() {
         name: `${agent.name}-Clone`,
         role: agent.role,
         factionId: agent.factionId,
-        x: agent.x + (Math.random() - 0.5) * 30,
-        y: agent.y + (Math.random() - 0.5) * 30,
+        x: agent.x + (engineRef.current.sampleRandom() - 0.5) * 30,
+        y: agent.y + (engineRef.current.sampleRandom() - 0.5) * 30,
         color: agent.color,
         parentGenetics: agent.genetics,
         generation: agent.generation + 1
