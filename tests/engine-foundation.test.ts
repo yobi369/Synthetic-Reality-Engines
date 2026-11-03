@@ -96,3 +96,46 @@ describe("seeded timeline restoration", () => {
     expect(engine.tick).toBe(replay.tick);
   });
 });
+
+describe("run snapshot persistence", () => {
+  test("restores complete state and resumes the same seeded trajectory", () => {
+    const source = new SimulationEngine("microbial", 314159);
+    for (let i = 0; i < 15; i++) source.worldStep();
+    const snapshot = source.createFullSnapshot();
+    const restored = new SimulationEngine("microbial", 1);
+    restored.restoreRunSnapshot(snapshot, source.seed, "microbial");
+
+    expect(restored.seed).toBe(source.seed);
+    expect(restored.tick).toBe(source.tick);
+    expect(restored.agents).toEqual(source.agents);
+    expect(restored.logs).toEqual(source.logs);
+    expect(restored.history).toEqual(source.history);
+    for (let i = 0; i < 10; i++) {
+      source.worldStep();
+      restored.worldStep();
+    }
+    expect(restored.agents).toEqual(source.agents);
+    expect(restored.resources).toEqual(source.resources);
+    expect(restored.weather).toEqual(source.weather);
+  });
+
+  test("rejects malformed snapshots before applying them", () => {
+    const engine = new SimulationEngine("civilization", 5);
+    const invalid = { ...engine.createFullSnapshot(), agents: null } as any;
+    expect(() => engine.restoreRunSnapshot(invalid, 5, "civilization")).toThrow();
+    expect(() => engine.restoreRunSnapshot(engine.createFullSnapshot(), -1, "civilization")).toThrow();
+  });
+
+  test("all built-in presets initialize valid, bounded worlds", () => {
+    for (const preset of ["civilization", "wasteland", "galactic", "microbial", "sandbox"] as const) {
+      const engine = new SimulationEngine(preset, 42);
+      expect(engine.config.presetId).toBe(preset);
+      expect(engine.config.width).toBeGreaterThan(0);
+      expect(engine.config.height).toBeGreaterThan(0);
+      expect(engine.agents.length).toBeGreaterThan(0);
+      expect(engine.agents.length).toBeLessThanOrEqual(engine.config.maxAgents);
+      engine.worldStep();
+      expect(engine.tick).toBe(1);
+    }
+  });
+});
