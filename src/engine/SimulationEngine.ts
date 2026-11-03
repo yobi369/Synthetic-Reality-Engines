@@ -1729,6 +1729,11 @@ export class SimulationEngine {
     this.laws = JSON.parse(JSON.stringify(s.laws));
     this.clades = JSON.parse(JSON.stringify(s.clades));
     this.anomalies = JSON.parse(JSON.stringify(s.anomalies));
+    this.disasters = structuredClone(s.disasters ?? []);
+    this.dialogues = structuredClone(s.dialogues ?? []);
+    this.logs = structuredClone(s.logs ?? []);
+    this.history = structuredClone(s.history ?? []);
+    this.interventions = structuredClone(s.interventions ?? []);
     this.config = JSON.parse(JSON.stringify(s.config));
     if (s.weather) {
       this.weather = JSON.parse(JSON.stringify(s.weather));
