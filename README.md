@@ -37,6 +37,8 @@ cp .env.example .env
 bun run dev
 ```
 
+For account and server-side run features during development, start the API in a second terminal with `PORT=3001 bun run server:dev`; the Vite development server proxies `/api` requests to it. On Windows PowerShell, use `$env:PORT=3001; bun run server:dev`.
+
 The Vite development server is configured for port **3000**. Run `bun run start` to launch the Express API server. For production, build with `bun run build`, then launch with `bun run start:prod`. The simulation interface can run without a Gemini API key.
 
 ## Quality commands
