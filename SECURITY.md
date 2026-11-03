@@ -25,3 +25,14 @@ The current AI endpoints accept structured request bodies and pass selected cont
 ## Reporting
 
 Please report suspected vulnerabilities privately to the repository owner rather than publishing exploit details in an issue. Include affected paths, impact and reproducible steps. Do not include live secrets or personal data in reports.
+
+
+## Account and run data controls
+
+- Passwords are stored as scrypt-derived hashes with per-account random salts; plaintext passwords are not persisted.
+- Session bearer tokens are random and only SHA-256 token hashes are stored. Sessions expire after seven days and can be revoked.
+- Authenticated run and intervention operations always scope lookups and mutations by the session's account ID.
+- Registration and login endpoints have per-process IP rate limits. Deploy behind HTTPS and a trusted reverse proxy.
+- The current file-backed store is for a single server instance. Configure `DATA_DIR` on a persistent, access-restricted volume, limit host filesystem access, and maintain encrypted off-host backups.
+- Do not expose the data directory through static file serving. Do not commit production data or credentials.
+- Before multi-instance deployment, replace the file adapter with a transactional shared database and a distributed session/rate-limit store.
