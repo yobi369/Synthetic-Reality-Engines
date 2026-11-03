@@ -16,7 +16,7 @@ export interface LteeModelParameters {
   meanBeneficialEffect: number;
   /** Diminishing-returns coefficient acting on the current genetic background. */
   diminishingReturns: number;
-  /** Computationally scaled inoculum size; not the LTEE census population. */
+  /** Aggregate-model transfer bottleneck; default 5e6, represented by fitness classes rather than individual cells. */
   effectiveBottleneck: number;
   /** Maximum explicit fitness classes retained after each transfer. */
   maxFitnessClasses: number;
