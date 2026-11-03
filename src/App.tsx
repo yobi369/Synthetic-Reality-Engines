@@ -25,11 +25,13 @@ import { AgentSpawnerModal } from './components/AgentSpawnerModal';
 import { audioEngine } from './engine/AudioSynthesizer';
 import confetti from 'canvas-confetti';
 
+function createRunId() { return `run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`; }
+
 export default function App() {
   // Seed is visible and user-selectable for repeatable experiment runs.
   const [seedInput, setSeedInput] = useState<string>(() => String(Date.now() >>> 0));
   const engineRef = useRef<SimulationEngine>(new SimulationEngine('civilization', Number(seedInput)));
-  const runIdRef = useRef<string>(`run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+  const runIdRef = useRef<string>(createRunId());
 
   // UI Reactive States
   const [currentPreset, setCurrentPreset] = useState<WorldPresetId>('civilization');
@@ -128,6 +130,7 @@ export default function App() {
     setCurrentPreset(presetId);
     engineRef.current.reset(presetId, engineRef.current.seed);
     engineRef.current.recordIntervention('world.preset.reset', { presetId, seed: engineRef.current.seed });
+    runIdRef.current = createRunId();
     setSelectedAgentId(null);
     prevEpochRef.current = 1;
     syncStateFromEngine();
@@ -165,6 +168,7 @@ export default function App() {
   const handleReset = () => {
     engineRef.current.reset(currentPreset, engineRef.current.seed);
     engineRef.current.recordIntervention('world.reset', { preset: currentPreset, seed: engineRef.current.seed });
+    runIdRef.current = createRunId();
     setSelectedAgentId(null);
     prevEpochRef.current = 1;
     syncStateFromEngine();
@@ -208,6 +212,7 @@ export default function App() {
       const nextEngine = new SimulationEngine(run.preset as WorldPresetId, run.seed);
       nextEngine.restoreRunSnapshot(run.snapshot, run.seed, run.preset as WorldPresetId);
       nextEngine.recordIntervention('run.import', { source: 'json_file' });
+      runIdRef.current = createRunId();
       engineRef.current = nextEngine;
       setCurrentPreset(run.preset as WorldPresetId);
       setSeedInput(String(nextEngine.seed));
@@ -246,6 +251,7 @@ export default function App() {
     if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > 0xffffffff) return;
     engineRef.current.reset(currentPreset, parsed);
     engineRef.current.recordIntervention('world.seed.reset', { preset: currentPreset, seed: parsed });
+    runIdRef.current = createRunId();
     setSelectedAgentId(null);
     prevEpochRef.current = 1;
     syncStateFromEngine();
