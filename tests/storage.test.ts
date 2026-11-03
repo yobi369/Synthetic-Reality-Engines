@@ -1,5 +1,5 @@
 import { beforeAll, afterAll, describe, expect, test } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -38,6 +38,15 @@ describe('server-side identity and private run storage', () => {
     await storage.appendIntervention({ id: 'evt-1', runId: 'run-a', ownerId: alice.id, tick: 1, epoch: 1, action: 'test.event', parameters: {}, recordedAt: new Date().toISOString() });
     expect(await storage.listInterventions(bob.id, 'run-a')).toHaveLength(0);
     expect(await storage.listInterventions(alice.id, 'run-a')).toHaveLength(1);
+  });
+
+  test('migrates version-one stores to version two without losing existing records', async () => {
+    const legacy = { schemaVersion: 1, users: [], sessions: [], runs: [] };
+    await writeFile(path.join(directory, 'synthetic-reality-store.json'), JSON.stringify(legacy));
+    const health = await storage.storageHealth();
+    expect(health.schemaVersion).toBe(2);
+    const migrated = JSON.parse(await readFile(path.join(directory, 'synthetic-reality-store.json'), 'utf8'));
+    expect(migrated.interventions).toEqual([]);
   });
 
   test('rejects duplicate accounts and weak passwords', async () => {
