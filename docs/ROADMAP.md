@@ -1,75 +1,62 @@
-# Product roadmap
+# Product roadmap and release gates
 
-This roadmap distinguishes existing prototype capabilities from work still required. A feature is not considered complete merely because a UI panel exists.
+This roadmap distinguishes verified implementation work from remaining operational and scientific acceptance work.
 
 ## Stage 1 — Engineering foundation
 
 - [x] Document product scope and scientific limitations.
-- [x] Add a repeatable CI gate for type checking, tests and production build.
-- [x] Add initial simulation construction/reset invariant tests.
+- [x] CI typecheck, automated tests and production build.
+- [x] Initial simulation construction/reset invariant tests.
 - [ ] Establish a supported Node/Bun version matrix and lockfile policy.
 - [ ] Add dependency and secret scanning.
 
 ## Stage 2 — Trustworthy simulation core
 
-- [ ] Replace ambient `Math.random` calls with an injected, versioned seeded PRNG.
-- [ ] Persist PRNG state through reset, fork, export and restore.
-- [ ] Add schema-versioned world snapshots and migration tests.
-- [ ] Define and test invariants: finite coordinates, bounded health/energy, valid faction references, non-negative resource quantities and population caps.
+- [x] Replace simulation-engine ambient randomness with a seeded Mulberry32 PRNG.
+- [x] Persist PRNG state and entity counters through reset, fork, export and restore.
+- [x] Versioned JSON run snapshots and file-store schema migration tests.
+- [x] Computational invariants for finite state, non-negative bounded resources and population caps across five presets.
 - [ ] Add property-based tests for long-running state transitions.
-- [ ] Add deterministic replay of architect interventions.
+- [ ] Implement deterministic intervention replay (events are captured and retained, but not yet replayed automatically).
 
 ## Stage 3 — Scientific experiment workflow
 
-- [ ] Define experiment/run manifests: engine revision, preset, complete config, seed, duration and intervention log.
-- [ ] Support export/import with validation and integrity checks.
-- [ ] Add batch runs and replicated-seed comparisons.
-- [ ] Add sensitivity analysis and confidence intervals for selected metrics.
-- [ ] Publish benchmark scenarios and independent validation datasets.
-- [ ] Document model assumptions and known failure modes.
+- [x] Export/import with format validation and deterministic continuation.
+- [x] Capture architect interventions in an append-only run ledger.
+- [x] Document experiment provenance and a reference-dataset validation protocol.
+- [x] Add repeatable multi-preset, multi-seed performance benchmark runner.
+- [ ] Add full run manifests including immutable source revision and complete execution environment.
+- [ ] Add batch runs, sensitivity analysis and confidence intervals.
+- [ ] Select a domain-specific empirical dataset and complete independent validation.
 
 ## Stage 4 — Performance and scale
 
-- [ ] Establish baseline benchmarks by population size and simulation duration.
+- [x] Add a repeatable benchmark harness reporting ticks/second and selected state metrics.
+- [ ] Establish baselines across controlled population sizes and runtime environments.
 - [ ] Profile perception, interaction resolution, history retention and canvas rendering.
 - [ ] Bound or sample long-lived logs, histories and agent memories.
 - [ ] Consider worker-based stepping and render decoupling.
 - [ ] Define explicit limits and graceful degradation for large worlds.
 
-## Stage 5 — Production operations
+## Stage 5 — Hosted operations and security
 
-- [ ] Consolidate development and production API handlers.
-- [ ] Validate all API inputs with strict schemas and payload limits.
-- [ ] Add rate limits, provider deadlines, cancellation and safe error responses.
-- [ ] Add structured logs, metrics and readiness checks.
-- [ ] Decide on persistence, tenancy and authentication before multi-user hosting.
-- [ ] Add backup/restore and deployment smoke tests.
+- [x] Server-side account registration/login with scrypt password derivation.
+- [x] Expiring, revocable bearer sessions; session tokens are stored as hashes.
+- [x] Owner-scoped run create/list/read/delete endpoints and React account UI.
+- [x] Append-only intervention ingestion/retrieval with idempotent event IDs.
+- [x] Versioned single-instance JSON persistence with atomic replacement and v1-to-v2 migration.
+- [x] API input bounds, payload limits, registration/login rate limits and storage readiness check.
+- [ ] Replace the single-instance JSON store and in-process rate limiter with a transactional shared database before multi-instance scaling.
+- [ ] Add automated backup/restore and hosted persistent-volume restart acceptance tests.
+- [ ] Add structured logs, operational metrics and deployment smoke tests.
+- [ ] Consolidate duplicate development/production AI API handlers and add provider deadlines/cancellation.
 
-## Release gates
+## Scientific claims boundary
 
-A research release requires reproducible seeded runs, validated export/import, documented model assumptions, automated invariants and repeatable benchmark results. A production hosted release additionally requires security controls, operational monitoring, persistence strategy and deployment acceptance testing.
+The automated suite currently establishes computational repeatability and selected state invariants. It does **not** establish empirical validity, predictive accuracy, or fidelity to real ecosystems, societies, economies, or physical systems. Those claims require a defined target domain, licensed reference data, pre-registered metrics, calibration/holdout separation, uncertainty analysis and independent replication. See [RESEARCH_VALIDATION.md](RESEARCH_VALIDATION.md).
 
+## Deployment requirements
 
-## Persistence tranche status
+The current server-side adapter is single-instance file persistence. Set `DATA_DIR` to a persistent, access-restricted volume; an ephemeral container filesystem is not durable. Deploy behind HTTPS. Do not scale to multiple application instances until persistence, sessions and rate limiting use shared transactional services.
 
-- [x] Versioned portable run export/import with state validation and deterministic continuation.
-- [x] Best-effort browser local-storage recovery.
-- [x] Preset initialization smoke coverage for the five built-in worlds.
-- [ ] Cloud persistence, multi-user access controls, and server-side retention.
-- [ ] Schema migration framework beyond the current version-one compatibility path.
-- [ ] Scientific validation and benchmark baselines for emergent behavior.
-
-
-## Engineering gate update
-
-- [x] Server-side account registration and login with scrypt password derivation.
-- [x] Hashed bearer sessions with expiry and revocation.
-- [x] Owner-scoped run save/list/read/delete API.
-- [x] Append-only intervention event storage and retrieval API.
-- [x] Versioned file-store schema with v1-to-v2 migration path and atomic replacement writes.
-- [x] Snapshot includes full observable state and intervention ledger.
-- [x] Deterministic multi-preset computational validation tests and a documented empirical validation protocol.
-- [x] Wire account registration/login and private run save/restore into the React user interface.
-- [ ] Replace the single-instance JSON store with a transactional managed database before horizontal scaling.
-- [ ] Validate deployment on a persistent volume, including backup/restore and restart recovery.
-- [ ] Complete CI, independent review, and empirical validation against a domain-specific reference dataset.
+A hosted release is not accepted until the persistent volume survives restart, backups can be restored, CI passes on the exact release commit, and an operational smoke test succeeds.
