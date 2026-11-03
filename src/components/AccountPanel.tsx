@@ -47,6 +47,12 @@ export function AccountPanel({ currentRun, onRestore }: Props) {
     setBusy(true); setMessage('');
     try {
       await request('/api/runs', { method: 'POST', body: JSON.stringify(currentRun) });
+      const events = ((currentRun.snapshot as any)?.interventions || []) as Array<any>;
+      for (const event of events) {
+        await request('/api/runs/' + encodeURIComponent(currentRun.id) + '/interventions', {
+          method: 'POST', body: JSON.stringify({ id: event.id, tick: event.tick, epoch: event.epoch, action: event.action, parameters: event.parameters, recordedAt: event.recordedAt })
+        });
+      }
       const data = await request('/api/runs');
       setRuns(data.runs || []); setMessage('Run saved to your server-side account.');
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Save failed.'); }
