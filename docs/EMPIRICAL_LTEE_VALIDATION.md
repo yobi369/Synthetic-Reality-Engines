@@ -15,7 +15,25 @@ The first empirical reference is the *Escherichia coli* Long-Term Evolution Expe
 
 The dataset records relative fitness from competition assays between evolved *E. coli* populations and an oppositely marked ancestral strain. It is not a direct time series of absolute population abundance, nutrient concentration, mutation rate, or an organism-by-organism phenotype. The Fitness column is the reported relative-fitness measurement; rows are repeated competition replicates associated with a population and generation.
 
-This distinction matters. The current interactive microbial preset is a spatial, agent-based ecosystem with abstract energy/metabolism, food resources, mutation, predation and reproduction. It does not currently implement the LTEE's daily serial-transfer protocol, ancestral-vs-evolved competition assay, or a calibrated mapping from agent genetics to measured relative fitness. Therefore this dataset cannot honestly validate the whole SimulationEngine or its current microbial preset. The new analysis is a narrow empirical benchmark for published adaptation-curve families and a foundation for a future, explicitly specified LTEE subsystem. It is not evidence that the game simulation predicts real microbial evolution.
+This distinction matters. The existing interactive microbial preset remains explicitly **UNVALIDATED**: it is a spatial, agent-based ecosystem with abstract energy/metabolism, food resources, mutation, predation and reproduction. It does not implement the LTEE protocol and is not calibrated to this dataset. A separate LTEE-specific population-genetics subsystem now exists under `src/research/ltee/`; it must not be conflated with the interactive preset or the whole SimulationEngine.
+
+## LTEE-specific mechanistic subsystem
+
+Run the forward-time model, calibration and untouched holdout evaluation with:
+
+~~~bash
+bun run research:ltee-mechanistic
+~~~
+
+The implementation is in `src/research/ltee/engine.ts` and `scripts/ltee-mechanistic-validation.ts`. It uses the six complete non-mutator populations (Ara - 5, Ara - 6, Ara + 1, Ara + 2, Ara + 4 and Ara + 5). Mutator populations are excluded because the first model assumes a shared constant beneficial-mutation process; Ara - 3 is also a special citrate-using lineage and is not included in this narrow glucose-limited model.
+
+The forward model stores heritable fitness classes, applies selection during each batch-growth interval, introduces beneficial mutations at the end of the growth phase with a background-dependent exponential distribution of effects, and applies a Poissonized fixed-size bottleneck to approximate the daily 1:100 transfer. The computational bottleneck is a scaled effective population of 5,000, not the LTEE census population. This is an explicit computational approximation, not an exact reproduction of the laboratory population size or every ecological detail.
+
+Each archived population sample is then mixed computationally against its marked ancestor using the observed initial competitor counts and ancestor log-fold-change. The assay derives the same per-generation logit statistic as the published LTEE W statistic, plus alternative per-cycle and log-encoded measures. Calibration uses only the earliest 80% of each selected population's time series; the later 20% is evaluated after parameter selection.
+
+The candidate grid has 27 combinations of beneficial mutation rate, mean beneficial effect and diminishing-returns coefficient. Each encoding is fitted independently on equal-weighted population-specific calibration RMSE. The workflow reports holdout errors, population-cluster bootstrap intervals, parameter-selection stability and profile-sensitivity curves. The grid is deliberately small and should be expanded only through calibration-only preregistered refinement—not by tuning on the holdout.
+
+**Model limitations:** this is a minimal asexual, beneficial-mutation-only, diminishing-returns model. It does not explicitly represent citrate innovation, cross-feeding, evolved mutator status, deleterious mutations, exact census-size demography, resource depletion/lag physiology, or the complete genotype-level DFE. The non-mutator subset reduces—but does not eliminate—these limitations. Passing software tests or outperforming a baseline does not establish predictive validity.
 
 ## Reproducible analysis
 
@@ -101,8 +119,9 @@ These values are a first reference-curve benchmark, not validation of the Synthe
 
 ## Remaining scientific gates
 
-1. Have an independent researcher reproduce the analysis and confirm the data interpretation.
-2. Compare the reported fitness statistic with alternative defensible encodings and document sensitivity to assay design.
-3. Add parameter uncertainty and sensitivity analysis beyond the fixed-grid fit.
-4. Define a model-level mapping and a separate LTEE-style experimental protocol before claiming that any engine component is empirically validated.
-5. Retain this dataset's provenance, license and immutable version/hash in every exported benchmark report.
+1. Obtain a named external researcher to independently reproduce the mechanistic run and confirm data interpretation; the repository now contains a deterministic independent run protocol, but no external replication has yet occurred.
+2. Expand the fitness-encoding analysis and verify alternative encodings against the complete assay-level raw data and the current literature.
+3. Expand parameter uncertainty beyond the finite grid and evaluate sensitivity to the scaled bottleneck and model structure.
+4. Compare against independent population-genetic implementations and benchmark published power-law / two-epoch alternatives.
+5. Define a model-level mapping before connecting this subsystem to the existing agent-based microbial preset.
+6. Retain dataset provenance, license and immutable hash in every exported report.
