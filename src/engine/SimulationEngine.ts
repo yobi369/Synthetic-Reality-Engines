@@ -1739,7 +1739,7 @@ export class SimulationEngine {
     this.dialogues = structuredClone(s.dialogues ?? []);
     this.logs = structuredClone(s.logs ?? []);
     this.history = structuredClone(s.history ?? []);
-    this.interventions = structuredClone(s.interventions ?? []);
+    // The intervention ledger is global and append-only; timeline jumps must not erase branch history.
     if (s.counters) {
       this.nextAgentId = s.counters.nextAgentId; this.nextLogId = s.counters.nextLogId;
       this.nextDialogueId = s.counters.nextDialogueId; this.nextAnomalyId = s.counters.nextAnomalyId;
