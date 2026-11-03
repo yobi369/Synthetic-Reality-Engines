@@ -251,6 +251,8 @@ export interface TimelineFork {
     anomalies: CosmicAnomaly[];
     config: WorldConfig;
     weather?: WeatherState;
+    /** PRNG state captured so a restored fork continues its exact random stream. */
+    randomState?: number;
   };
 }
 
