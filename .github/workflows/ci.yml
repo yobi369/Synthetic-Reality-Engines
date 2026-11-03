@@ -17,7 +17,7 @@ jobs:
   verify:
     name: Typecheck, tests and build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,5 +33,7 @@ jobs:
         run: bun run test
       - name: Empirical LTEE benchmark
         run: bun run research:ltee
+      - name: LTEE mechanistic calibration and holdout validation
+        run: bun run research:ltee-mechanistic
       - name: Production build
         run: bun run build
