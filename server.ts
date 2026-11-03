@@ -75,7 +75,7 @@ app.post('/api/runs/:id/interventions', requireUser, async (req, res) => {
   if (!run) return res.status(404).json({ error: 'Run not found.' });
   const b = req.body || {};
   if (!Number.isInteger(b.tick) || b.tick < 0 || !Number.isInteger(b.epoch) || b.epoch < 1 || typeof b.action !== 'string' || !/^[a-z][a-z0-9_.-]{1,79}$/.test(b.action) || !b.parameters || typeof b.parameters !== 'object' || Array.isArray(b.parameters)) return res.status(400).json({ error: 'Invalid intervention event.' });
-  await appendIntervention({ id: randomBytes(16).toString('hex'), runId: run.id, ownerId, tick: b.tick, epoch: b.epoch, action: b.action, parameters: b.parameters, recordedAt: new Date().toISOString() });
+  await appendIntervention({ id: typeof b.id === 'string' && /^[a-zA-Z0-9_-]{1,120}$/.test(b.id) ? b.id : randomBytes(16).toString('hex'), runId: run.id, ownerId, tick: b.tick, epoch: b.epoch, action: b.action, parameters: b.parameters, recordedAt: typeof b.recordedAt === 'string' ? b.recordedAt : new Date().toISOString() });
   res.status(201).json({ recorded: true });
 });
 // AI Chronicler Endpoint: Generates a rich lore chronicle of the synthetic world
