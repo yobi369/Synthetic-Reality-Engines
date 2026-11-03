@@ -112,6 +112,10 @@ describe("run snapshot persistence", () => {
     expect(restored.agents).toEqual(source.agents);
     expect(restored.logs).toEqual(source.logs);
     expect(restored.history).toEqual(source.history);
+    const parent = source.agents[0]!;
+    const sourceSpawn = source.createAgent({ name: 'Checkpoint probe', x: 20, y: 20, factionId: parent.factionId, parentGenetics: parent.genetics });
+    const restoredSpawn = restored.createAgent({ name: 'Checkpoint probe', x: 20, y: 20, factionId: parent.factionId, parentGenetics: parent.genetics });
+    expect(restoredSpawn).toEqual(sourceSpawn);
     for (let i = 0; i < 10; i++) {
       source.worldStep();
       restored.worldStep();
