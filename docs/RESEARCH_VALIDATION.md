@@ -43,6 +43,12 @@ These are regression tests, not proof of scientific validity. Their time horizon
 
 For each preset and commit, report runtime, ticks/second, peak memory, population trajectory, resource totals, event counts, seed, and environment. Compare changes using identical seeds and operation sequences. Never compare a different seed or altered intervention schedule as though it were a controlled performance comparison.
 
+## First empirical reference benchmark
+
+A narrow, reproducible reference-data analysis is now documented in [EMPIRICAL_LTEE_VALIDATION.md](./EMPIRICAL_LTEE_VALIDATION.md). It uses public *E. coli* LTEE competition-fitness measurements to compare constant, power-law and saturating adaptation curves with a per-population temporal holdout. Run it with `bun run research:ltee`.
+
+This benchmark evaluates curve families against a published fitness trajectory. It does **not** yet connect the agent-based SimulationEngine to the LTEE protocol or establish that the microbial preset predicts real microbial dynamics.
+
 ## Known limitations
 
-The engine currently has no independently validated empirical dataset mapping, calibration procedure, uncertainty model, or domain-specific acceptance thresholds. Consequently the repository may report deterministic computational behavior and measured software performance, but must not claim predictive accuracy or validated scientific simulation.
+The engine still has no calibrated mapping from its agent/genetic/resource state to the LTEE's measured relative-fitness observations, no experimentally faithful serial-transfer/competition protocol, and no empirical validation of its spatial ecology, resource regeneration, species interactions or other presets. The repository may report deterministic computational behavior, measured software performance and the narrow reference-curve benchmark, but must not claim predictive accuracy or validated scientific simulation.
