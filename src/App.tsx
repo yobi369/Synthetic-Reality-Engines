@@ -127,6 +127,7 @@ export default function App() {
   const handleSelectPreset = (presetId: WorldPresetId) => {
     setCurrentPreset(presetId);
     engineRef.current.reset(presetId, engineRef.current.seed);
+    engineRef.current.recordIntervention('world.preset.reset', { presetId, seed: engineRef.current.seed });
     setSelectedAgentId(null);
     prevEpochRef.current = 1;
     syncStateFromEngine();
@@ -159,6 +160,7 @@ export default function App() {
 
   const handleReset = () => {
     engineRef.current.reset(currentPreset, engineRef.current.seed);
+    engineRef.current.recordIntervention('world.reset', { preset: currentPreset, seed: engineRef.current.seed });
     setSelectedAgentId(null);
     prevEpochRef.current = 1;
     syncStateFromEngine();
@@ -201,6 +203,7 @@ export default function App() {
       }
       const nextEngine = new SimulationEngine(run.preset as WorldPresetId, run.seed);
       nextEngine.restoreRunSnapshot(run.snapshot, run.seed, run.preset as WorldPresetId);
+      nextEngine.recordIntervention('run.import', { source: 'json_file' });
       engineRef.current = nextEngine;
       setCurrentPreset(run.preset as WorldPresetId);
       setSeedInput(String(nextEngine.seed));
@@ -238,6 +241,7 @@ export default function App() {
     const parsed = Number(seedInput);
     if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > 0xffffffff) return;
     engineRef.current.reset(currentPreset, parsed);
+    engineRef.current.recordIntervention('world.seed.reset', { preset: currentPreset, seed: parsed });
     setSelectedAgentId(null);
     prevEpochRef.current = 1;
     syncStateFromEngine();
