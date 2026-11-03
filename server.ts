@@ -57,6 +57,15 @@ app.post('/api/auth/login', async (req, res) => {
 });
 app.get('/api/auth/me', requireUser, (req, res) => res.json({ user: safeUser((req as any).user) }));
 app.post('/api/auth/logout', requireUser, async (req, res) => { await revokeSession((req as any).sessionToken); res.status(204).end(); });
+app.get('/api/runs', requireUser, async (req, res) => res.json({ runs: await listRuns((req as any).user.id) }));
+app.post('/api/runs', requireUser, async (req, res) => {
+  const b = req.body || {};
+  if (typeof b.id !== 'string' || b.id.length > 100 || typeof b.name !== 'string' || b.name.length > 120 || typeof b.preset !== 'string' || !Number.isInteger(b.seed) || b.seed < 0 || b.seed > 0xffffffff || !Number.isInteger(b.tick) || b.tick < 0 || !b.snapshot || typeof b.snapshot !== 'object') return res.status(400).json({ error: 'Invalid run payload.' });
+  try { const run = await saveRun((req as any).user.id, { id: b.id, name: b.name, preset: b.preset, seed: b.seed, tick: b.tick, snapshot: b.snapshot }); res.status(201).json({ run: { id: run.id, name: run.name, preset: run.preset, seed: run.seed, tick: run.tick, createdAt: run.createdAt, updatedAt: run.updatedAt } }); }
+  catch { res.status(500).json({ error: 'Could not save run.' }); }
+});
+app.get('/api/runs/:id', requireUser, async (req, res) => { const run = await getRun((req as any).user.id, req.params.id); if (!run) return res.status(404).json({ error: 'Run not found.' }); res.json({ run }); });
+app.delete('/api/runs/:id', requireUser, async (req, res) => { const ok = await deleteRun((req as any).user.id, req.params.id); if (!ok) return res.status(404).json({ error: 'Run not found.' }); res.status(204).end(); });
 // AI Chronicler Endpoint: Generates a rich lore chronicle of the synthetic world
 app.post('/api/chronicler', async (req, res) => {
   try {
