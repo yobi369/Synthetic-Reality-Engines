@@ -44,3 +44,37 @@ describe("SimulationEngine foundation", () => {
     expect(engine.agents.length).toBeLessThanOrEqual(engine.config.maxAgents);
   });
 });
+
+
+describe("seeded simulation", () => {
+  test("same seed produces identical initial worlds and tick trajectories", () => {
+    const first = new SimulationEngine("civilization", 123456);
+    const second = new SimulationEngine("civilization", 123456);
+
+    expect(first.agents).toEqual(second.agents);
+    expect(first.weather).toEqual(second.weather);
+    for (let i = 0; i < 20; i++) {
+      first.worldStep();
+      second.worldStep();
+    }
+    expect(first.agents).toEqual(second.agents);
+    expect(first.factions).toEqual(second.factions);
+    expect(first.resources).toEqual(second.resources);
+    expect(first.weather).toEqual(second.weather);
+    expect(first.tick).toBe(second.tick);
+  });
+
+  test("different seeds produce different initial populations", () => {
+    const first = new SimulationEngine("civilization", 100);
+    const second = new SimulationEngine("civilization", 200);
+    expect(first.agents).not.toEqual(second.agents);
+  });
+
+  test("reset restores the constructor seed and reproducible initial state", () => {
+    const engine = new SimulationEngine("civilization", 77);
+    const initialAgents = structuredClone(engine.agents);
+    engine.worldStep();
+    engine.reset("civilization");
+    expect(engine.agents).toEqual(initialAgents);
+  });
+});
