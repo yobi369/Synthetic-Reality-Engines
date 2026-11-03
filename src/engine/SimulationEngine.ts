@@ -46,10 +46,14 @@ export class SimulationEngine {
   public isRunning: boolean = true;
   public speed: number = 1; // 1x, 5x, 20x, etc.
 
-  private readonly initialSeed: number;
+  private initialSeed: number;
   private randomState: number;
 
   /** Mulberry32 PRNG: deterministic for a given seed and call sequence. */
+  public get seed(): number {
+    return this.initialSeed;
+  }
+
   private random(): number {
     let value = (this.randomState += 0x6D2B79F5);
     value = Math.imul(value ^ (value >>> 15), value | 1);
@@ -114,7 +118,8 @@ export class SimulationEngine {
     this.recordHistorySnapshot();
   }
 
-  public reset(presetId: WorldPresetId) {
+  public reset(presetId: WorldPresetId, seed: number = this.initialSeed) {
+    this.initialSeed = seed >>> 0;
     this.randomState = this.initialSeed;
     const preset = WORLD_PRESETS[presetId] || WORLD_PRESETS.civilization;
     this.config = { ...preset.config };
