@@ -1635,6 +1635,11 @@ export class SimulationEngine {
     this.logs = structuredClone(snapshot.logs ?? []);
     this.history = structuredClone(snapshot.history ?? []);
     this.interventions = structuredClone(snapshot.interventions ?? []);
+    if (snapshot.counters) {
+      this.nextAgentId = snapshot.counters.nextAgentId; this.nextLogId = snapshot.counters.nextLogId;
+      this.nextDialogueId = snapshot.counters.nextDialogueId; this.nextAnomalyId = snapshot.counters.nextAnomalyId;
+      this.nextLawId = snapshot.counters.nextLawId; this.nextForkId = snapshot.counters.nextForkId; this.nextCladeId = snapshot.counters.nextCladeId;
+    }
     this.config = structuredClone(snapshot.config);
     this.weather = structuredClone(snapshot.weather);
     this.activeForkId = 'fork_prime';
@@ -1659,6 +1664,7 @@ export class SimulationEngine {
       tick: this.tick,
       epoch: this.epoch,
       interventions: structuredClone(this.interventions),
+      counters: { nextAgentId: this.nextAgentId, nextLogId: this.nextLogId, nextDialogueId: this.nextDialogueId, nextAnomalyId: this.nextAnomalyId, nextLawId: this.nextLawId, nextForkId: this.nextForkId, nextCladeId: this.nextCladeId },
       disasters: structuredClone(this.disasters),
       dialogues: structuredClone(this.dialogues),
       logs: structuredClone(this.logs),
@@ -1734,6 +1740,11 @@ export class SimulationEngine {
     this.logs = structuredClone(s.logs ?? []);
     this.history = structuredClone(s.history ?? []);
     this.interventions = structuredClone(s.interventions ?? []);
+    if (s.counters) {
+      this.nextAgentId = s.counters.nextAgentId; this.nextLogId = s.counters.nextLogId;
+      this.nextDialogueId = s.counters.nextDialogueId; this.nextAnomalyId = s.counters.nextAnomalyId;
+      this.nextLawId = s.counters.nextLawId; this.nextForkId = s.counters.nextForkId; this.nextCladeId = s.counters.nextCladeId;
+    }
     this.config = JSON.parse(JSON.stringify(s.config));
     if (s.weather) {
       this.weather = JSON.parse(JSON.stringify(s.weather));
