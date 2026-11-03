@@ -229,7 +229,6 @@ export function simulateLteePopulation(
   const maxGeneration = targets[targets.length - 1] ?? 0;
   while (generation < maxGeneration) {
     const dt = LTEE_GENERATIONS_PER_TRANSFER;
-    const total = [...classes.values()].reduce((sum, count) => sum + count, 0);
     const maximumCoefficient = Math.max(...classes.keys()) * binWidth;
     const weights = new Map<number, number>();
     let weightTotal = 0;
@@ -269,7 +268,7 @@ export function simulateLteePopulation(
     for (const [key, count] of mutated) classes.set(key, count);
 
     const previousGeneration = generation;
-    generation = Math.min(maxGeneration, generation + dt);
+    generation += dt;
     transfer++;
     const current: LteePopulationSnapshot = {
       generation,
