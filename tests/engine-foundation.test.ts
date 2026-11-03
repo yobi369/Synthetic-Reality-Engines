@@ -88,12 +88,13 @@ describe("seeded timeline restoration", () => {
     const fork = engine.forkTimeline("checkpoint", "determinism test");
     for (let i = 0; i < 12; i++) engine.worldStep();
     engine.recordIntervention('test.after_fork', { branch: fork.id });
+    const checkpoint = engine.createFullSnapshot();
+    expect(engine.switchTimeline('fork_prime')).toBe(true);
+    expect(engine.tick).toBe(8);
     expect(engine.switchTimeline(fork.id)).toBe(true);
-    for (let i = 0; i < 12; i++) engine.worldStep();
-    const replay = new SimulationEngine("microbial", 909);
-    for (let i = 0; i < 8; i++) replay.worldStep();
-    replay.forkTimeline("checkpoint", "determinism test");
-    for (let i = 0; i < 12; i++) replay.worldStep();
+    const replay = new SimulationEngine("microbial", 1);
+    replay.restoreRunSnapshot(checkpoint, 909, "microbial");
+    for (let i = 0; i < 12; i++) { engine.worldStep(); replay.worldStep(); }
     expect(engine.agents).toEqual(replay.agents);
     expect(engine.resources).toEqual(replay.resources);
     expect(engine.tick).toBe(replay.tick);
