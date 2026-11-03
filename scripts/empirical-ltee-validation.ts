@@ -22,7 +22,7 @@ export interface CurveModel {
 }
 
 export function parseFitnessCsv(csv: string): FitnessObservation[] {
-  const lines = csv.trim().split(/\\r?\\n/);
+  const lines = csv.trim().split(/\r?\n/);
   if (lines.length < 2) throw new Error('LTEE dataset is empty');
   const header = lines[0].split(',');
   const index = Object.fromEntries(header.map((name, i) => [name, i]));
