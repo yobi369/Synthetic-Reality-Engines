@@ -78,3 +78,21 @@ describe("seeded simulation", () => {
     expect(engine.agents).toEqual(initialAgents);
   });
 });
+
+
+describe("seeded timeline restoration", () => {
+  test("restored timeline continues from its captured random state", () => {
+    const engine = new SimulationEngine("microbial", 909);
+    for (let i = 0; i < 8; i++) engine.worldStep();
+    const fork = engine.forkTimeline("checkpoint", "determinism test");
+    for (let i = 0; i < 12; i++) engine.worldStep();
+    expect(engine.switchTimeline(fork.id)).toBe(true);
+    for (let i = 0; i < 12; i++) engine.worldStep();
+    const replay = new SimulationEngine("microbial", 909);
+    for (let i = 0; i < 8; i++) replay.worldStep();
+    for (let i = 0; i < 12; i++) replay.worldStep();
+    expect(engine.agents).toEqual(replay.agents);
+    expect(engine.resources).toEqual(replay.resources);
+    expect(engine.tick).toBe(replay.tick);
+  });
+});
