@@ -66,6 +66,18 @@ app.post('/api/runs', requireUser, async (req, res) => {
 });
 app.get('/api/runs/:id', requireUser, async (req, res) => { const run = await getRun((req as any).user.id, req.params.id); if (!run) return res.status(404).json({ error: 'Run not found.' }); res.json({ run }); });
 app.delete('/api/runs/:id', requireUser, async (req, res) => { const ok = await deleteRun((req as any).user.id, req.params.id); if (!ok) return res.status(404).json({ error: 'Run not found.' }); res.status(204).end(); });
+app.get('/api/runs/:id/interventions', requireUser, async (req, res) => {
+  if (!await getRun((req as any).user.id, req.params.id)) return res.status(404).json({ error: 'Run not found.' });
+  res.json({ interventions: await listInterventions((req as any).user.id, req.params.id) });
+});
+app.post('/api/runs/:id/interventions', requireUser, async (req, res) => {
+  const ownerId = (req as any).user.id; const run = await getRun(ownerId, req.params.id);
+  if (!run) return res.status(404).json({ error: 'Run not found.' });
+  const b = req.body || {};
+  if (!Number.isInteger(b.tick) || b.tick < 0 || !Number.isInteger(b.epoch) || b.epoch < 1 || typeof b.action !== 'string' || !/^[a-z][a-z0-9_.-]{1,79}$/.test(b.action) || !b.parameters || typeof b.parameters !== 'object' || Array.isArray(b.parameters)) return res.status(400).json({ error: 'Invalid intervention event.' });
+  await appendIntervention({ id: randomBytes(16).toString('hex'), runId: run.id, ownerId, tick: b.tick, epoch: b.epoch, action: b.action, parameters: b.parameters, recordedAt: new Date().toISOString() });
+  res.status(201).json({ recorded: true });
+});
 // AI Chronicler Endpoint: Generates a rich lore chronicle of the synthetic world
 app.post('/api/chronicler', async (req, res) => {
   try {
@@ -200,7 +212,7 @@ Return JSON:
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', engine: 'Synthetic Reality Engine Core v2.0' });
+  try { res.json({ status: 'ok', engine: 'Synthetic Reality Engine', storage: await storageHealth() }); } catch { res.status(503).json({ status: 'degraded', storage: 'unavailable' }); }
 });
 
 // In production, serve the static frontend
