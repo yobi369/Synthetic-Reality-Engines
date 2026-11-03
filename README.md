@@ -66,6 +66,7 @@ Never put provider keys in Vite-exposed variables (for example, `VITE_GEMINI_API
 - The engine now accepts an explicit numeric seed (`new SimulationEngine(preset, seed)`) and uses an internal PRNG for engine randomness. Identical seeds and identical operation sequences reproduce engine trajectories; default construction uses a time-derived seed.
 - Timeline forks remain in-memory. Runs can be exported/imported as versioned JSON. Architect actions are recorded in the run's intervention ledger and included in snapshots.
 - The current model is a 2D agent/world simulation. It has deterministic computational regression tests, but no empirical calibration or demonstrated real-world predictive validity.
+- The interactive `microbial` preset is explicitly **UNVALIDATED** and must not be presented as an LTEE or real microbial prediction model. A separate, narrow LTEE research subsystem exists under `src/research/ltee/` and is documented in `docs/EMPIRICAL_LTEE_VALIDATION.md`.
 - AI-generated chronicles are narrative interpretations, not evidence or ground truth.
 - Performance and population limits need formal benchmark coverage before large-scale claims are made.
 
