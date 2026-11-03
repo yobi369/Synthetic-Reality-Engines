@@ -13,7 +13,8 @@
     "start": "bun server.ts",
     "start:prod": "NODE_ENV=production bun server.ts",
     "server:dev": "bun server.ts",
-    "benchmark": "bun scripts/benchmark.ts"
+    "benchmark": "bun scripts/benchmark.ts",
+    "research:ltee": "bun scripts/empirical-ltee-validation.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
