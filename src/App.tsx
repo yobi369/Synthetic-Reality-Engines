@@ -175,7 +175,8 @@ export default function App() {
       epoch: engine.epoch,
       config: engine.config,
       snapshot: engine.createFullSnapshot(),
-      logs: engine.logs
+      logs: engine.logs,
+      interventions: engine.interventions
     };
     const blob = new Blob([JSON.stringify(run, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -242,11 +243,13 @@ export default function App() {
 
   const handleTriggerDisaster = (type: any) => {
     engineRef.current.triggerDisaster(type);
+    engineRef.current.recordIntervention('disaster.trigger', { type });
     syncStateFromEngine();
   };
 
   const handleUpdateConfig = (newCfg: Partial<WorldConfig>) => {
     engineRef.current.config = { ...engineRef.current.config, ...newCfg };
+    engineRef.current.recordIntervention('world.config.update', newCfg as Record<string, unknown>);
   };
 
   const handleInjectThought = async (agentId: string, thoughtText: string) => {
@@ -257,6 +260,7 @@ export default function App() {
     agent.goal = `Responding to neural directive: "${thoughtText.slice(0, 30)}..."`;
     agent.thoughtTimer = 200;
     agent.memory = [...(agent.memory || []).slice(-8), `Direct neural directive: ${thoughtText}`];
+    engineRef.current.recordIntervention('agent.directive', { agentId, directive: thoughtText });
 
     try {
       const res = await fetch('/api/agent-thought', {
@@ -285,6 +289,7 @@ export default function App() {
       agent.energy = agent.maxEnergy;
       agent.currentThought = 'Vitality restored by Architect.';
       agent.thoughtTimer = 100;
+      engineRef.current.recordIntervention('agent.heal', { agentId });
       syncStateFromEngine();
     }
   };
@@ -295,6 +300,7 @@ export default function App() {
       agent.wealth += 50;
       agent.currentThought = 'Assets subsidized by the Architect.';
       agent.thoughtTimer = 100;
+      engineRef.current.recordIntervention('agent.wealth_boost', { agentId, amount: 50 });
       syncStateFromEngine();
     }
   };
@@ -313,6 +319,7 @@ export default function App() {
         generation: agent.generation + 1
       });
       engineRef.current.addLog('emergence', 'Agent Cloned', `${clone.name} cloned from ${agent.name}.`, 'high');
+      engineRef.current.recordIntervention('agent.clone', { sourceAgentId: agentId, cloneId: clone.id });
       setSelectedAgentId(clone.id);
       syncStateFromEngine();
     }
@@ -344,6 +351,7 @@ export default function App() {
     });
 
     engine.addLog('emergence', 'Unit Instantiated', `${newAgent.name} (${newAgent.role}) spawned into ${faction.name}.`, 'high');
+    engine.recordIntervention('agent.spawn', { agentId: newAgent.id, name: newAgent.name, role: newAgent.role, factionId: faction.id });
     setSelectedAgentId(newAgent.id);
     syncStateFromEngine();
   };
@@ -353,6 +361,7 @@ export default function App() {
     const engine = engineRef.current;
     if (cosmicTool && cosmicTool !== 'none' && cosmicTool !== 'inspect') {
       engine.triggerCosmicTool(cosmicTool, x, y);
+      engine.recordIntervention('cosmic_tool.apply', { tool: cosmicTool, x, y });
       syncStateFromEngine();
     }
   };
@@ -360,17 +369,20 @@ export default function App() {
   // Weather System Manual Trigger
   const handleSetWeather = (type: WeatherType) => {
     engineRef.current.triggerWeatherCycle(type);
+    engineRef.current.recordIntervention('weather.set', { type });
     syncStateFromEngine();
   };
 
   // Multiverse Fork & Jump
   const handleForkTimeline = (name: string, description: string) => {
     const newForkId = engineRef.current.forkTimeline(name, description);
+    engineRef.current.recordIntervention('timeline.fork', { name, description, forkId: newForkId });
     syncStateFromEngine();
   };
 
   const handleSwitchTimeline = (forkId: string) => {
     engineRef.current.switchTimeline(forkId);
+    engineRef.current.recordIntervention('timeline.switch', { forkId });
     setSelectedAgentId(null);
     syncStateFromEngine();
   };
@@ -390,6 +402,7 @@ export default function App() {
       votesAgainst: []
     };
     engineRef.current.laws = [newLaw, ...engineRef.current.laws];
+    engineRef.current.recordIntervention('governance.decree', { lawId: newLaw.id, title: newLaw.title, category: newLaw.category, effects: newLaw.effects });
     audioEngine.playLawSound();
     engineRef.current.addLog('diplomacy', 'Supreme Decree Enacted', `Universal law "${newLaw.title}" promulgated across all realms.`, 'critical');
     syncStateFromEngine();
