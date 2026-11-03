@@ -61,7 +61,7 @@ Never put provider keys in Vite-exposed variables (for example, `VITE_GEMINI_API
 ## Product boundaries and current limitations
 
 - The engine now accepts an explicit numeric seed (`new SimulationEngine(preset, seed)`) and uses an internal PRNG for engine randomness. Identical seeds and identical operation sequences reproduce engine trajectories; default construction uses a time-derived seed.
-- Timeline snapshots are in-memory application state; durable persistence, schema-versioned exports and restore workflows are not yet established.
+- Timeline forks remain in-memory. The UI can export a versioned JSON run snapshot (configuration, seed, current state and logs), but import/restore and full intervention history are not implemented.
 - The current model is a 2D agent/world simulation. It does not claim physically validated mechanics, real-world predictive accuracy or scientific reproducibility.
 - AI-generated chronicles are narrative interpretations, not evidence or ground truth.
 - Performance and population limits need formal benchmark coverage before large-scale claims are made.
@@ -70,7 +70,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ROADMAP.md](docs/ROADMAP
 
 ## Research and responsible use
 
-For serious experiments, record the preset, configuration, code revision, intervention sequence, run duration and observed outputs. For reproducible comparisons, provide the same explicit seed and record the preset, configuration, code revision, seed and intervention sequence. Exportable run manifests and durable snapshots remain future work. Avoid using simulated outcomes as substitutes for empirical evidence or real-world policy decisions.
+For serious experiments, record the preset, configuration, code revision, intervention sequence, run duration and observed outputs. For reproducible comparisons, use the same seed and preset. Exported JSON snapshots record the seed, preset, configuration, current tick/epoch, engine version, state and logs; they do not yet include a complete intervention history or a supported import/restore workflow. Avoid using simulated outcomes as substitutes for empirical evidence or real-world policy decisions.
 
 ## Contributing
 
