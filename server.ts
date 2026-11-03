@@ -44,6 +44,19 @@ function getGeminiClient(): GoogleGenAI | null {
   }
 }
 
+app.post('/api/auth/register', async (req, res) => {
+  if (!rateLimit(req.ip || 'unknown', 5)) return res.status(429).json({ error: 'Too many account attempts.' });
+  try { const user = await registerUser(String(req.body?.email || ''), String(req.body?.password || '')); const session = await createSession(user.id); res.status(201).json({ user: safeUser(user), ...session }); }
+  catch (error: any) { res.status(400).json({ error: error.message || 'Registration failed.' }); }
+});
+app.post('/api/auth/login', async (req, res) => {
+  if (!rateLimit(req.ip || 'unknown', 10)) return res.status(429).json({ error: 'Too many login attempts.' });
+  const user = await authenticateUser(String(req.body?.email || ''), String(req.body?.password || ''));
+  if (!user) return res.status(401).json({ error: 'Invalid email or password.' });
+  res.json({ user: safeUser(user), ...await createSession(user.id) });
+});
+app.get('/api/auth/me', requireUser, (req, res) => res.json({ user: safeUser((req as any).user) }));
+app.post('/api/auth/logout', requireUser, async (req, res) => { await revokeSession((req as any).sessionToken); res.status(204).end(); });
 // AI Chronicler Endpoint: Generates a rich lore chronicle of the synthetic world
 app.post('/api/chronicler', async (req, res) => {
   try {
