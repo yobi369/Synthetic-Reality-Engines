@@ -92,6 +92,7 @@ describe("seeded timeline restoration", () => {
     for (let i = 0; i < 12; i++) engine.worldStep();
     const replay = new SimulationEngine("microbial", 909);
     for (let i = 0; i < 8; i++) replay.worldStep();
+    replay.forkTimeline("checkpoint", "determinism test");
     for (let i = 0; i < 12; i++) replay.worldStep();
     expect(engine.agents).toEqual(replay.agents);
     expect(engine.resources).toEqual(replay.resources);
