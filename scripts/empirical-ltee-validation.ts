@@ -218,8 +218,8 @@ export function runLteeValidation(csv: string) {
   };
 }
 
-if (import.meta.main) {
+if (process.argv[1]?.includes('empirical-ltee-validation.ts')) {
   const csvPath = new URL('../research/data/ltee_fitness.csv', import.meta.url);
   const csv = readFileSync(csvPath, 'utf8');
-  process.stdout.write(JSON.stringify(runLteeValidation(csv), null, 2) + '\\n');
+  process.stdout.write(JSON.stringify(runLteeValidation(csv), null, 2) + '\n');
 }
