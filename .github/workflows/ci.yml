@@ -31,5 +31,7 @@ jobs:
         run: bun run lint
       - name: Test
         run: bun run test
+      - name: Empirical LTEE benchmark
+        run: bun run research:ltee
       - name: Production build
         run: bun run build
