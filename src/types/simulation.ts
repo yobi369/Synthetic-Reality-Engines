@@ -228,6 +228,11 @@ export interface WorldLaw {
   tickRatified?: number;
 }
 
+export interface InterventionEvent {
+  id: string; tick: number; epoch: number; action: string;
+  parameters: Record<string, unknown>; recordedAt: string;
+}
+
 export interface TimelineFork {
   id: string;
   name: string;
@@ -241,6 +246,7 @@ export interface TimelineFork {
   snapshotState: {
     tick: number;
     epoch: number;
+    interventions?: InterventionEvent[];
     agents: Agent[];
     factions: Faction[];
     resources: ResourceNode[];
