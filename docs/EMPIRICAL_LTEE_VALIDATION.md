@@ -58,6 +58,16 @@ The initial run produced the following metrics. RMSE and MAE are in relative-fit
 
 Calibration selects the power-law candidate, but the saturating curve has a slightly lower temporal holdout RMSE (difference 0.005641) and MAE. The two population-cluster bootstrap intervals overlap substantially. This run therefore does not establish a clear predictive winner between the two non-constant curves. It does show that both adaptation curves outperform the constant ancestral baseline on this split, while the small holdout difference between power-law and saturating fits is uncertain.
 
+
+### Calibration-cluster bootstrap
+
+A 250-resample calibration bootstrap (seed 20261104), refitting every candidate curve on each resampled set of population clusters, selected the power-law family in 250/250 resamples (100%); the constant and saturating families were selected in 0/250 resamples. Conditional 95% parameter intervals were:
+
+- Power-law exponent (b): [0.29, 0.36]; amplitude (a): [0.01661, 0.03203].
+- Saturating parameter (c): [0.000188, 0.000317]; amplitude (a): [0.0001398, 0.0002046].
+
+This indicates that the power-law family is stable under the chosen calibration-cluster resampling procedure. It does not resolve the small holdout advantage for the saturating curve: model-selection frequency measures calibration stability, while the temporal holdout is the separate test of later-generation generalization. The bootstrap intervals are conditional on the specified family and fixed candidate grids.
+
 Per-population holdout RMSE for the calibration-selected power-law curve:
 
 | LTEE population | Holdout points | RMSE |
