@@ -1606,7 +1606,7 @@ export class SimulationEngine {
     if (!snapshot || !Number.isSafeInteger(snapshot.tick) || snapshot.tick < 0 || !Number.isSafeInteger(snapshot.epoch) || snapshot.epoch < 1) {
       throw new Error('Invalid simulation snapshot metadata.');
     }
-    const requiredArrays = ['agents', 'factions', 'resources', 'buildings', 'laws', 'clades', 'anomalies', 'disasters', 'dialogues', 'logs', 'history'];
+    const requiredArrays = ['agents', 'factions', 'resources', 'buildings', 'laws', 'clades', 'anomalies'];
     for (const key of requiredArrays) {
       if (!Array.isArray((snapshot as any)[key])) throw new Error(`Invalid snapshot: ${key} must be an array.`);
     }
@@ -1625,10 +1625,10 @@ export class SimulationEngine {
     this.laws = structuredClone(snapshot.laws);
     this.clades = structuredClone(snapshot.clades);
     this.anomalies = structuredClone(snapshot.anomalies);
-    this.disasters = structuredClone(snapshot.disasters);
-    this.dialogues = structuredClone(snapshot.dialogues);
-    this.logs = structuredClone(snapshot.logs);
-    this.history = structuredClone(snapshot.history);
+    this.disasters = structuredClone(snapshot.disasters ?? []);
+    this.dialogues = structuredClone(snapshot.dialogues ?? []);
+    this.logs = structuredClone(snapshot.logs ?? []);
+    this.history = structuredClone(snapshot.history ?? []);
     this.config = structuredClone(snapshot.config);
     this.weather = structuredClone(snapshot.weather);
     this.activeForkId = 'fork_prime';
