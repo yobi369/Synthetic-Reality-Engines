@@ -1605,7 +1605,8 @@ export class SimulationEngine {
       clades: JSON.parse(JSON.stringify(this.clades)),
       anomalies: JSON.parse(JSON.stringify(this.anomalies)),
       config: JSON.parse(JSON.stringify(this.config)),
-      weather: this.weather ? JSON.parse(JSON.stringify(this.weather)) : undefined
+      weather: this.weather ? JSON.parse(JSON.stringify(this.weather)) : undefined,
+      randomState: this.randomState
     };
   }
 
