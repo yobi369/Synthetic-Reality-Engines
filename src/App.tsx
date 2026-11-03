@@ -374,7 +374,7 @@ export default function App() {
             <input id="simulation-seed" inputMode="numeric" pattern="[0-9]*" value={seedInput} onChange={event => setSeedInput(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100" aria-describedby="seed-help" />
             <p id="seed-help" className="mt-1 text-xs text-slate-500">Use the same seed and preset to reproduce the same engine run. Applying a seed restarts the world.</p>
           </div>
-          <button type="button" onClick={handleApplySeed} disabled={!Array.from(seedInput).every(char => char >= '0' && char <= '9') || !Number.isSafeInteger(Number(seedInput)) || Number(seedInput) > 0xffffffff} className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-40">Apply seed & restart</button>
+          <button type="button" onClick={handleApplySeed} disabled={seedInput.length === 0 || !Array.from(seedInput).every(char => char >= '0' && char <= '9') || !Number.isSafeInteger(Number(seedInput)) || Number(seedInput) > 0xffffffff} className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-40">Apply seed & restart</button>
         </section>
         
         {/* VIEW 1: Live Interactive Reality Canvas & Cosmic Manipulator */}
