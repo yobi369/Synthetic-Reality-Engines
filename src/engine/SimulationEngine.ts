@@ -1687,6 +1687,8 @@ export class SimulationEngine {
   }
 
   public forkTimeline(name: string, description: string): TimelineFork {
+    const parentFork = this.timelineForks.find(fork => fork.id === this.activeForkId);
+    if (parentFork) parentFork.snapshotState = this.createFullSnapshot();
     const forkColors = ['#ec4899', '#8b5cf6', '#10b981', '#f59e0b', '#06b6d4', '#e11d48'];
     const newFork: TimelineFork = {
       id: `fork_${this.nextForkId++}`,
