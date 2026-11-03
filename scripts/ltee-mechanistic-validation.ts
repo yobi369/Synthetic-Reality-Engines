@@ -372,7 +372,7 @@ function evaluateMetric(
     holdoutErrors[population] = best.predictions
       .filter(point => point.population === population && test.some(row =>
         row.population === point.population && row.generation === point.generation))
-      .map(point => (point.predicted?.[encoding] ?? 0 - point.observed[encoding]) ** 2);
+      .map(point => ((point.predicted?.[encoding] ?? 0) - point.observed[encoding]) ** 2);
   }
   const bootstrap = bootstrapHoldout(holdoutErrors);
   const populations = [...new Set(train.map(point => point.population))];
