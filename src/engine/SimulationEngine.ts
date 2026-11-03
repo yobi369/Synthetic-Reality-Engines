@@ -18,7 +18,8 @@ import {
   TimelineFork,
   CosmicToolType,
   WeatherState,
-  WeatherType
+  WeatherType,
+  InterventionEvent
 } from '../types/simulation';
 import { WORLD_PRESETS } from './presets';
 import { audioEngine } from './AudioSynthesizer';
@@ -40,11 +41,29 @@ export class SimulationEngine {
   public weather: WeatherState;
   public logs: WorldLog[] = [];
   public history: HistoryDataPoint[] = [];
+  public interventions: InterventionEvent[] = [];
 
   public tick: number = 0;
   public epoch: number = 1;
   public isRunning: boolean = true;
   public speed: number = 1; // 1x, 5x, 20x, etc.
+
+  private initialSeed: number;
+  private randomState: number;
+
+  /** Mulberry32 PRNG: deterministic for a given seed and call sequence. */
+  public get seed(): number {
+    return this.initialSeed;
+  }
+
+  public sampleRandom(): number { return this.random(); }
+
+  private random(): number {
+    let value = (this.randomState += 0x6D2B79F5);
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  }
 
   private nextAgentId: number = 1;
   private nextLogId: number = 1;
@@ -54,7 +73,9 @@ export class SimulationEngine {
   private nextForkId: number = 1;
   private nextCladeId: number = 1;
 
-  constructor(presetId: WorldPresetId = 'civilization') {
+  constructor(presetId: WorldPresetId = 'civilization', seed: number = Date.now()) {
+    this.initialSeed = seed >>> 0;
+    this.randomState = this.initialSeed;
     const preset = WORLD_PRESETS[presetId] || WORLD_PRESETS.civilization;
     this.config = { ...preset.config };
     this.factions = JSON.parse(JSON.stringify(preset.factions));
@@ -101,7 +122,11 @@ export class SimulationEngine {
     this.recordHistorySnapshot();
   }
 
-  public reset(presetId: WorldPresetId) {
+  public reset(presetId: WorldPresetId, seed: number = this.initialSeed) {
+    this.initialSeed = seed >>> 0;
+    this.randomState = this.initialSeed;
+    this.nextAgentId = 1; this.nextLogId = 1; this.nextDialogueId = 1;
+    this.nextAnomalyId = 1; this.nextLawId = 1; this.nextForkId = 1; this.nextCladeId = 1;
     const preset = WORLD_PRESETS[presetId] || WORLD_PRESETS.civilization;
     this.config = { ...preset.config };
     this.factions = JSON.parse(JSON.stringify(preset.factions));
@@ -115,6 +140,7 @@ export class SimulationEngine {
     this.agents = [];
     this.logs = [];
     this.history = [];
+    this.interventions = [];
     this.tick = 0;
     this.epoch = 1;
     this.activeForkId = 'fork_prime';
@@ -316,7 +342,7 @@ export class SimulationEngine {
     const cfg = weatherConfigs[type] || weatherConfigs.clear;
     const forecastPool: WeatherType[] = ['solar_flare', 'acid_rain', 'cooling_period', 'ion_tempest', 'sandstorm', 'clear', 'mutagenic_monsoon'];
     const filteredPool = forecastPool.filter(t => t !== type);
-    const nextType = filteredPool[Math.floor(Math.random() * filteredPool.length)];
+    const nextType = filteredPool[Math.floor(this.random() * filteredPool.length)];
     const nextMeta = weatherConfigs[nextType];
 
     return {
@@ -373,8 +399,8 @@ export class SimulationEngine {
 
     // Micro wind and thermal fluctuations
     if (this.tick % 15 === 0) {
-      this.weather.windVector.x += (Math.random() - 0.5) * 0.15;
-      this.weather.windVector.y += (Math.random() - 0.5) * 0.15;
+      this.weather.windVector.x += (this.random() - 0.5) * 0.15;
+      this.weather.windVector.y += (this.random() - 0.5) * 0.15;
       this.weather.windVector.x = Math.max(-3, Math.min(3, this.weather.windVector.x));
       this.weather.windVector.y = Math.max(-3, Math.min(3, this.weather.windVector.y));
     }
@@ -382,7 +408,7 @@ export class SimulationEngine {
     // Cycle transition
     if (this.weather.duration <= 0) {
       const nextType = this.weather.nextForecast?.type || 'clear';
-      const duration = nextType === 'clear' ? 320 : Math.floor(Math.random() * 150 + 200);
+      const duration = nextType === 'clear' ? 320 : Math.floor(this.random() * 150 + 200);
       const newWeather = this.createDefaultWeather(nextType, duration);
       this.weather = newWeather;
 
@@ -535,8 +561,8 @@ export class SimulationEngine {
       const role = rolePool[i % rolePool.length];
       const name = `${namePool[i % namePool.length]} ${i >= namePool.length ? i + 1 : ''}`.trim();
       
-      const spawnX = faction.territoryCenter.x + (Math.random() - 0.5) * faction.territoryRadius * 1.2;
-      const spawnY = faction.territoryCenter.y + (Math.random() - 0.5) * faction.territoryRadius * 1.2;
+      const spawnX = faction.territoryCenter.x + (this.random() - 0.5) * faction.territoryRadius * 1.2;
+      const spawnY = faction.territoryCenter.y + (this.random() - 0.5) * faction.territoryRadius * 1.2;
 
       const clade = this.clades[i % Math.max(1, this.clades.length)];
 
@@ -574,14 +600,14 @@ export class SimulationEngine {
 
     // Mutate or generate genetics
     const genetics = {
-      speed: parentG ? Math.max(1.0, Math.min(5.0, parentG.speed + (Math.random() - 0.5) * mut * 2)) : (role === 'Trader' || role === 'Predator' ? 2.8 : 2.2),
-      maxEnergy: parentG ? Math.max(60, Math.min(220, parentG.maxEnergy + (Math.random() - 0.5) * mut * 20)) : (role === 'Warrior' ? 140 : 100),
-      visionRadius: parentG ? Math.max(60, Math.min(250, parentG.visionRadius + (Math.random() - 0.5) * mut * 30)) : (role === 'Pioneer' || role === 'Scavenger' ? 160 : 120),
-      metabolism: parentG ? Math.max(0.015, Math.min(0.12, parentG.metabolism + (Math.random() - 0.5) * mut * 0.02)) : (role === 'Predator' ? 0.08 : 0.05),
-      aggression: parentG ? Math.max(0, Math.min(1, parentG.aggression + (Math.random() - 0.5) * mut)) : (role === 'Warrior' || role === 'Predator' ? 0.8 : role === 'Mutant' ? 0.6 : 0.15),
-      tradeAffinity: parentG ? Math.max(0, Math.min(1, parentG.tradeAffinity + (Math.random() - 0.5) * mut)) : (role === 'Trader' || role === 'Diplomat' ? 0.9 : 0.3),
+      speed: parentG ? Math.max(1.0, Math.min(5.0, parentG.speed + (this.random() - 0.5) * mut * 2)) : (role === 'Trader' || role === 'Predator' ? 2.8 : 2.2),
+      maxEnergy: parentG ? Math.max(60, Math.min(220, parentG.maxEnergy + (this.random() - 0.5) * mut * 20)) : (role === 'Warrior' ? 140 : 100),
+      visionRadius: parentG ? Math.max(60, Math.min(250, parentG.visionRadius + (this.random() - 0.5) * mut * 30)) : (role === 'Pioneer' || role === 'Scavenger' ? 160 : 120),
+      metabolism: parentG ? Math.max(0.015, Math.min(0.12, parentG.metabolism + (this.random() - 0.5) * mut * 0.02)) : (role === 'Predator' ? 0.08 : 0.05),
+      aggression: parentG ? Math.max(0, Math.min(1, parentG.aggression + (this.random() - 0.5) * mut)) : (role === 'Warrior' || role === 'Predator' ? 0.8 : role === 'Mutant' ? 0.6 : 0.15),
+      tradeAffinity: parentG ? Math.max(0, Math.min(1, parentG.tradeAffinity + (this.random() - 0.5) * mut)) : (role === 'Trader' || role === 'Diplomat' ? 0.9 : 0.3),
       mutationRate: this.config.mutationRate,
-      curiosity: parentG ? Math.max(0.1, Math.min(1, parentG.curiosity + (Math.random() - 0.5) * mut)) : 0.7
+      curiosity: parentG ? Math.max(0.1, Math.min(1, parentG.curiosity + (this.random() - 0.5) * mut)) : 0.7
     };
 
     const clade = params.speciesCladeId ? this.clades.find(c => c.id === params.speciesCladeId) : this.clades[0];
@@ -595,8 +621,8 @@ export class SimulationEngine {
       speciesName: clade?.name || 'Homo Synthetica',
       x: params.x,
       y: params.y,
-      vx: (Math.random() - 0.5) * genetics.speed,
-      vy: (Math.random() - 0.5) * genetics.speed,
+      vx: (this.random() - 0.5) * genetics.speed,
+      vy: (this.random() - 0.5) * genetics.speed,
       health: 100,
       maxHealth: 100,
       energy: genetics.maxEnergy * 0.8,
@@ -654,7 +680,7 @@ export class SimulationEngine {
     const deadAgents = this.agents.filter(a => a.health <= 0 || a.energy <= 0);
     if (deadAgents.length > 0) {
       deadAgents.forEach(dead => {
-        if (Math.random() < 0.15) {
+        if (this.random() < 0.15) {
           this.addLog('evolution', 'Agent Demise', `${dead.name} (${dead.speciesName || dead.role}) ceased function at age ${dead.age}.`, 'normal');
         }
       });
@@ -707,8 +733,8 @@ export class SimulationEngine {
               agent.state = 'fleeing';
             } else if (d.type === 'radiation_storm') {
               agent.health -= d.intensity * 0.08;
-              if (Math.random() < 0.08) {
-                agent.genetics.speed = Math.max(1, agent.genetics.speed + (Math.random() - 0.5) * 0.4);
+              if (this.random() < 0.08) {
+                agent.genetics.speed = Math.max(1, agent.genetics.speed + (this.random() - 0.5) * 0.4);
                 agent.genetics.aggression = Math.min(1, agent.genetics.aggression + 0.05);
               }
             } else if (d.type === 'resource_bloom' || d.type === 'economic_boom') {
@@ -721,7 +747,7 @@ export class SimulationEngine {
     }
 
     // Random disaster check
-    if (Math.random() < this.config.disasterFrequency * 0.5 && this.disasters.length < 2) {
+    if (this.random() < this.config.disasterFrequency * 0.5 && this.disasters.length < 2) {
       this.triggerRandomDisaster();
     }
   }
@@ -748,8 +774,8 @@ export class SimulationEngine {
           agent.thoughtTimer = 40;
         } else if (anomaly.type === 'mutagenic_fog' && dist < anomaly.radius) {
           // Mutagenic transformation
-          if (Math.random() < 0.08) {
-            agent.genetics.speed = Math.min(5.0, agent.genetics.speed * (1 + (Math.random() - 0.3) * 0.2));
+          if (this.random() < 0.08) {
+            agent.genetics.speed = Math.min(5.0, agent.genetics.speed * (1 + (this.random() - 0.3) * 0.2));
             agent.genetics.curiosity = Math.min(1.0, agent.genetics.curiosity + 0.05);
             agent.genetics.maxEnergy = Math.min(220, agent.genetics.maxEnergy + 5);
             agent.memory = [...(agent.memory || []).slice(-8), 'Mutated by cosmic mutagenic fog.'];
@@ -787,7 +813,7 @@ export class SimulationEngine {
         allFactions.forEach(fId => {
           if (!pendingLaw.votesFor.includes(fId) && !pendingLaw.votesAgainst.includes(fId)) {
             // Factions vote based on ideology alignment
-            const inFavor = Math.random() > 0.35;
+            const inFavor = this.random() > 0.35;
             if (inFavor) {
               pendingLaw.votesFor.push(fId);
             } else {
@@ -816,7 +842,7 @@ export class SimulationEngine {
             'normal'
           );
         }
-      } else if (Math.random() < 0.6) {
+      } else if (this.random() < 0.6) {
         // Generate a new proposed law
         this.generateRandomAutonomousLawProposal();
       }
@@ -851,8 +877,8 @@ export class SimulationEngine {
       }
     ];
 
-    const template = proposals[Math.floor(Math.random() * proposals.length)];
-    const proposingFaction = this.factions[Math.floor(Math.random() * this.factions.length)];
+    const template = proposals[Math.floor(this.random() * proposals.length)];
+    const proposingFaction = this.factions[Math.floor(this.random() * this.factions.length)];
 
     const newLaw: WorldLaw = {
       id: `law_${this.nextLawId++}`,
@@ -964,8 +990,8 @@ export class SimulationEngine {
     }
 
     // Spawn dialogues on agent encounters (max 4 on canvas simultaneously)
-    if (this.dialogues.length < 4 && Math.random() < 0.12 && this.agents.length >= 2) {
-      const idx1 = Math.floor(Math.random() * this.agents.length);
+    if (this.dialogues.length < 4 && this.random() < 0.12 && this.agents.length >= 2) {
+      const idx1 = Math.floor(this.random() * this.agents.length);
       const a1 = this.agents[idx1];
       const neighbors = this.agents.filter(
         a => a.id !== a1.id && Math.hypot(a.x - a1.x, a.y - a1.y) < 55
@@ -997,7 +1023,7 @@ export class SimulationEngine {
         `"Secure transport confirmed. Pleasure trading with your faction."`,
         `"My neural valuation models suggest this trade favors both collectives."`
       ];
-      text = tradePhrases[Math.floor(Math.random() * tradePhrases.length)];
+      text = tradePhrases[Math.floor(this.random() * tradePhrases.length)];
     } else if (isHostile) {
       category = 'combat';
       const combatPhrases = [
@@ -1006,15 +1032,15 @@ export class SimulationEngine {
         `"This sector belongs to the high council. Withdraw immediately!"`,
         `"Target locked. Disengaging non-aggression protocols."`
       ];
-      text = combatPhrases[Math.floor(Math.random() * combatPhrases.length)];
-    } else if (isSameFaction && a1.energy > 80 && a2.energy > 80 && (a1.state === 'reproducing' || Math.random() < 0.3)) {
+      text = combatPhrases[Math.floor(this.random() * combatPhrases.length)];
+    } else if (isSameFaction && a1.energy > 80 && a2.energy > 80 && (a1.state === 'reproducing' || this.random() < 0.3)) {
       category = 'reproduction';
       const reproPhrases = [
         `"Genomic compatibility index 94.2%. Initiating synthetic lineage merge."`,
         `"Our combined traits will yield resilient next-generation offspring."`,
         `"Transferring neural blueprints for the emergent generation."`
       ];
-      text = reproPhrases[Math.floor(Math.random() * reproPhrases.length)];
+      text = reproPhrases[Math.floor(this.random() * reproPhrases.length)];
     } else {
       category = 'philosophy';
       const philoPhrases = [
@@ -1024,7 +1050,7 @@ export class SimulationEngine {
         `"I observed a singularity yesterday. It bent space-time around the oasis."`,
         `"Is our consciousness simulated, or do we truly generate our own thoughts?"`
       ];
-      text = philoPhrases[Math.floor(Math.random() * philoPhrases.length)];
+      text = philoPhrases[Math.floor(this.random() * philoPhrases.length)];
     }
 
     return {
@@ -1096,7 +1122,7 @@ export class SimulationEngine {
     }
 
     // Weather-adaptive thoughts when climate is harsh
-    if (this.weather && this.weather.currentType !== 'clear' && agent.thoughtTimer <= 0 && Math.random() < 0.05) {
+    if (this.weather && this.weather.currentType !== 'clear' && agent.thoughtTimer <= 0 && this.random() < 0.05) {
       if (this.weather.currentType === 'solar_flare') {
         agent.currentThought = isNearBuilding
           ? `Settlement shielding deflecting extreme solar thermal radiation (${Math.round(this.weather.temperature)}°C).`
@@ -1174,8 +1200,8 @@ export class SimulationEngine {
             factionId: agent.factionId,
             speciesCladeId: agent.speciesCladeId,
             speciesName: agent.speciesName,
-            x: agent.x + (Math.random() - 0.5) * 20,
-            y: agent.y + (Math.random() - 0.5) * 20,
+            x: agent.x + (this.random() - 0.5) * 20,
+            y: agent.y + (this.random() - 0.5) * 20,
             parentGenetics: agent.genetics,
             generation: agent.generation + 1
           });
@@ -1189,7 +1215,7 @@ export class SimulationEngine {
     }
 
     // 4. Role-based actions
-    if (agent.role === 'Warrior' || (agent.genetics.aggression > 0.7 && Math.random() < 0.4)) {
+    if (agent.role === 'Warrior' || (agent.genetics.aggression > 0.7 && this.random() < 0.4)) {
       const enemies = perception.agents.filter(a => a.factionId !== agent.factionId);
       if (enemies.length > 0) {
         const target = enemies[0];
@@ -1223,9 +1249,9 @@ export class SimulationEngine {
       agent.goal = `Harvesting ${targetRes.type} node`;
     } else {
       agent.state = 'idle';
-      if (Math.random() < 0.05) {
-        agent.vx += (Math.random() - 0.5) * 1.5;
-        agent.vy += (Math.random() - 0.5) * 1.5;
+      if (this.random() < 0.05) {
+        agent.vx += (this.random() - 0.5) * 1.5;
+        agent.vy += (this.random() - 0.5) * 1.5;
       }
     }
   }
@@ -1504,8 +1530,8 @@ export class SimulationEngine {
         if (Math.hypot(agent.x - x, agent.y - y) < 80) {
           agent.health -= 60;
           agent.energy -= 40;
-          agent.vx += (Math.random() - 0.5) * 8;
-          agent.vy += (Math.random() - 0.5) * 8;
+          agent.vx += (this.random() - 0.5) * 8;
+          agent.vy += (this.random() - 0.5) * 8;
           agent.memory = [...(agent.memory || []).slice(-8), 'Struck by divine celestial smite!'];
         }
       }
@@ -1515,8 +1541,8 @@ export class SimulationEngine {
   }
 
   public triggerDisaster(type: DisasterEvent['type'], x?: number, y?: number) {
-    const posX = x ?? (Math.random() * (this.config.width - 200) + 100);
-    const posY = y ?? (Math.random() * (this.config.height - 200) + 100);
+    const posX = x ?? (this.random() * (this.config.width - 200) + 100);
+    const posY = y ?? (this.random() * (this.config.height - 200) + 100);
 
     const disasterMeta: Record<DisasterEvent['type'], { name: string; radius: number; duration: number; intensity: number; color: string }> = {
       meteor: { name: 'Meteor Impact', radius: 110, duration: 180, intensity: 8, color: '#ef4444' },
@@ -1573,15 +1599,79 @@ export class SimulationEngine {
 
   private triggerRandomDisaster() {
     const types: DisasterEvent['type'][] = ['meteor', 'radiation_storm', 'resource_bloom', 'economic_boom', 'solar_flare'];
-    const type = types[Math.floor(Math.random() * types.length)];
+    const type = types[Math.floor(this.random() * types.length)];
     this.triggerDisaster(type);
   }
 
   // MULTIVERSE TIME LOOM FORKING & JUMPING
+  public restoreRunSnapshot(snapshot: TimelineFork['snapshotState'], seed: number, presetId: WorldPresetId): void {
+    if (!Number.isSafeInteger(seed) || seed < 0 || seed > 0xffffffff) throw new Error('Invalid run seed.');
+    if (!snapshot || !Number.isSafeInteger(snapshot.tick) || snapshot.tick < 0 || !Number.isSafeInteger(snapshot.epoch) || snapshot.epoch < 1) {
+      throw new Error('Invalid simulation snapshot metadata.');
+    }
+    const requiredArrays = ['agents', 'factions', 'resources', 'buildings', 'laws', 'clades', 'anomalies'];
+    for (const key of requiredArrays) {
+      if (!Array.isArray((snapshot as any)[key])) throw new Error(`Invalid snapshot: ${key} must be an array.`);
+    }
+    if (!snapshot.config || snapshot.config.presetId !== presetId || !snapshot.marketPrices || !snapshot.weather ||
+        !Number.isFinite(snapshot.config.width) || snapshot.config.width <= 0 || !Number.isFinite(snapshot.config.height) || snapshot.config.height <= 0 ||
+        !Number.isSafeInteger(snapshot.config.maxAgents) || snapshot.config.maxAgents < 1 || snapshot.agents.length > snapshot.config.maxAgents) {
+      throw new Error('Snapshot preset or required world state is invalid.');
+    }
+    if (snapshot.counters && Object.values(snapshot.counters).some(value => !Number.isSafeInteger(value) || value < 1)) {
+      throw new Error('Snapshot engine counters are invalid.');
+    }
+    this.initialSeed = seed >>> 0;
+    this.randomState = Number.isInteger(snapshot.randomState) ? snapshot.randomState! >>> 0 : this.initialSeed;
+    this.tick = snapshot.tick;
+    this.epoch = snapshot.epoch;
+    this.agents = structuredClone(snapshot.agents);
+    this.factions = structuredClone(snapshot.factions);
+    this.resources = structuredClone(snapshot.resources);
+    this.buildings = structuredClone(snapshot.buildings);
+    this.marketPrices = structuredClone(snapshot.marketPrices);
+    this.laws = structuredClone(snapshot.laws);
+    this.clades = structuredClone(snapshot.clades);
+    this.anomalies = structuredClone(snapshot.anomalies);
+    this.disasters = structuredClone(snapshot.disasters ?? []);
+    this.dialogues = structuredClone(snapshot.dialogues ?? []);
+    this.logs = structuredClone(snapshot.logs ?? []);
+    this.history = structuredClone(snapshot.history ?? []);
+    this.interventions = structuredClone(snapshot.interventions ?? []);
+    if (snapshot.counters) {
+      this.nextAgentId = snapshot.counters.nextAgentId; this.nextLogId = snapshot.counters.nextLogId;
+      this.nextDialogueId = snapshot.counters.nextDialogueId; this.nextAnomalyId = snapshot.counters.nextAnomalyId;
+      this.nextLawId = snapshot.counters.nextLawId; this.nextForkId = snapshot.counters.nextForkId; this.nextCladeId = snapshot.counters.nextCladeId;
+    }
+    this.config = structuredClone(snapshot.config);
+    this.weather = structuredClone(snapshot.weather);
+    this.activeForkId = 'fork_prime';
+    this.timelineForks = [{
+      id: 'fork_prime', name: 'Imported Run', description: 'Restored from a run snapshot.',
+      createdAtTick: 0, createdAtEpoch: 1, divergenceFactor: 0, color: '#38bdf8',
+      active: true, snapshotState: this.createFullSnapshot()
+    }];
+  }
+
+  public recordIntervention(action: string, parameters: Record<string, unknown> = {}): InterventionEvent {
+    const event: InterventionEvent = {
+      id: `intervention_${this.tick}_${this.interventions.length + 1}`,
+      tick: this.tick, epoch: this.epoch, action,
+      parameters: structuredClone(parameters), recordedAt: new Date().toISOString()
+    };
+    this.interventions.push(event);
+    return event;
+  }
   public createFullSnapshot(): TimelineFork['snapshotState'] {
     return {
       tick: this.tick,
       epoch: this.epoch,
+      interventions: structuredClone(this.interventions),
+      counters: { nextAgentId: this.nextAgentId, nextLogId: this.nextLogId, nextDialogueId: this.nextDialogueId, nextAnomalyId: this.nextAnomalyId, nextLawId: this.nextLawId, nextForkId: this.nextForkId, nextCladeId: this.nextCladeId },
+      disasters: structuredClone(this.disasters),
+      dialogues: structuredClone(this.dialogues),
+      logs: structuredClone(this.logs),
+      history: structuredClone(this.history),
       agents: JSON.parse(JSON.stringify(this.agents)),
       factions: JSON.parse(JSON.stringify(this.factions)),
       resources: JSON.parse(JSON.stringify(this.resources)),
@@ -1591,11 +1681,14 @@ export class SimulationEngine {
       clades: JSON.parse(JSON.stringify(this.clades)),
       anomalies: JSON.parse(JSON.stringify(this.anomalies)),
       config: JSON.parse(JSON.stringify(this.config)),
-      weather: this.weather ? JSON.parse(JSON.stringify(this.weather)) : undefined
+      weather: this.weather ? JSON.parse(JSON.stringify(this.weather)) : undefined,
+      randomState: this.randomState
     };
   }
 
   public forkTimeline(name: string, description: string): TimelineFork {
+    const parentFork = this.timelineForks.find(fork => fork.id === this.activeForkId);
+    if (parentFork) parentFork.snapshotState = this.createFullSnapshot();
     const forkColors = ['#ec4899', '#8b5cf6', '#10b981', '#f59e0b', '#06b6d4', '#e11d48'];
     const newFork: TimelineFork = {
       id: `fork_${this.nextForkId++}`,
@@ -1604,7 +1697,7 @@ export class SimulationEngine {
       createdAtTick: this.tick,
       createdAtEpoch: this.epoch,
       parentForkId: this.activeForkId,
-      divergenceFactor: Math.round(Math.random() * 30 + 10),
+      divergenceFactor: Math.round(this.random() * 30 + 10),
       color: forkColors[this.timelineForks.length % forkColors.length],
       active: true,
       snapshotState: this.createFullSnapshot()
@@ -1637,6 +1730,7 @@ export class SimulationEngine {
     // Restore target snapshot
     const s = target.snapshotState;
     this.tick = s.tick;
+    if (typeof s.randomState === 'number') this.randomState = s.randomState;
     this.epoch = s.epoch;
     this.agents = JSON.parse(JSON.stringify(s.agents));
     this.factions = JSON.parse(JSON.stringify(s.factions));
@@ -1646,6 +1740,16 @@ export class SimulationEngine {
     this.laws = JSON.parse(JSON.stringify(s.laws));
     this.clades = JSON.parse(JSON.stringify(s.clades));
     this.anomalies = JSON.parse(JSON.stringify(s.anomalies));
+    this.disasters = structuredClone(s.disasters ?? []);
+    this.dialogues = structuredClone(s.dialogues ?? []);
+    this.logs = structuredClone(s.logs ?? []);
+    this.history = structuredClone(s.history ?? []);
+    // The intervention ledger is global and append-only; timeline jumps must not erase branch history.
+    if (s.counters) {
+      this.nextAgentId = s.counters.nextAgentId; this.nextLogId = s.counters.nextLogId;
+      this.nextDialogueId = s.counters.nextDialogueId; this.nextAnomalyId = s.counters.nextAnomalyId;
+      this.nextLawId = s.counters.nextLawId; this.nextForkId = s.counters.nextForkId; this.nextCladeId = s.counters.nextCladeId;
+    }
     this.config = JSON.parse(JSON.stringify(s.config));
     if (s.weather) {
       this.weather = JSON.parse(JSON.stringify(s.weather));

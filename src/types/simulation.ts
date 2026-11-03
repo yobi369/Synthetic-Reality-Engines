@@ -228,6 +228,11 @@ export interface WorldLaw {
   tickRatified?: number;
 }
 
+export interface InterventionEvent {
+  id: string; tick: number; epoch: number; action: string;
+  parameters: Record<string, unknown>; recordedAt: string;
+}
+
 export interface TimelineFork {
   id: string;
   name: string;
@@ -241,6 +246,8 @@ export interface TimelineFork {
   snapshotState: {
     tick: number;
     epoch: number;
+    interventions?: InterventionEvent[];
+    counters?: { nextAgentId: number; nextLogId: number; nextDialogueId: number; nextAnomalyId: number; nextLawId: number; nextForkId: number; nextCladeId: number };
     agents: Agent[];
     factions: Faction[];
     resources: ResourceNode[];
@@ -249,8 +256,14 @@ export interface TimelineFork {
     laws: WorldLaw[];
     clades: SpeciesClade[];
     anomalies: CosmicAnomaly[];
+    disasters: DisasterEvent[];
+    dialogues: AgentDialogue[];
+    logs: WorldLog[];
+    history: HistoryDataPoint[];
     config: WorldConfig;
     weather?: WeatherState;
+    /** PRNG state captured so a restored fork continues its exact random stream. */
+    randomState?: number;
   };
 }
 

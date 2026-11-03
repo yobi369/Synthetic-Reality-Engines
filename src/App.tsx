@@ -10,6 +10,7 @@ import {
   WeatherType
 } from './types/simulation';
 import { Header, AppViewType } from './components/Header';
+import { AccountPanel } from './components/AccountPanel';
 import { SimulationCanvas } from './components/SimulationCanvas';
 import { AgentInspector } from './components/AgentInspector';
 import { ObservabilityDashboard } from './components/ObservabilityDashboard';
@@ -24,9 +25,13 @@ import { AgentSpawnerModal } from './components/AgentSpawnerModal';
 import { audioEngine } from './engine/AudioSynthesizer';
 import confetti from 'canvas-confetti';
 
+function createRunId() { return `run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`; }
+
 export default function App() {
-  // Primary simulation engine instance in ref for 60FPS performance
-  const engineRef = useRef<SimulationEngine>(new SimulationEngine('civilization'));
+  // Seed is visible and user-selectable for repeatable experiment runs.
+  const [seedInput, setSeedInput] = useState<string>(() => String(Date.now() >>> 0));
+  const engineRef = useRef<SimulationEngine>(new SimulationEngine('civilization', Number(seedInput)));
+  const runIdRef = useRef<string>(createRunId());
 
   // UI Reactive States
   const [currentPreset, setCurrentPreset] = useState<WorldPresetId>('civilization');
@@ -56,6 +61,17 @@ export default function App() {
     setTick(engine.tick);
     setEpoch(engine.epoch);
     setPopulation(engine.agents.length);
+    if (engine.tick % 10 === 0) {
+      try {
+        localStorage.setItem('synthetic-reality:last-run', JSON.stringify({
+          format: 'synthetic-reality-run', formatVersion: 1, engineVersion: '0.1.0',
+          seed: engine.seed, preset: engine.config.presetId, tick: engine.tick, epoch: engine.epoch,
+          snapshot: engine.createFullSnapshot()
+        }));
+      } catch (error) {
+        console.warn('Autosave skipped (storage unavailable or quota exceeded).', error);
+      }
+    }
 
     if (engine.epoch > prevEpochRef.current) {
       prevEpochRef.current = engine.epoch;
@@ -112,7 +128,9 @@ export default function App() {
   // Handlers
   const handleSelectPreset = (presetId: WorldPresetId) => {
     setCurrentPreset(presetId);
-    engineRef.current.reset(presetId);
+    engineRef.current.reset(presetId, engineRef.current.seed);
+    engineRef.current.recordIntervention('world.preset.reset', { presetId, seed: engineRef.current.seed });
+    runIdRef.current = createRunId();
     setSelectedAgentId(null);
     prevEpochRef.current = 1;
     syncStateFromEngine();
@@ -121,17 +139,20 @@ export default function App() {
   const handleToggleRun = () => {
     const engine = engineRef.current;
     engine.isRunning = !engine.isRunning;
+    engine.recordIntervention(engine.isRunning ? 'simulation.resume' : 'simulation.pause');
     setIsRunning(engine.isRunning);
   };
 
   const handleStep = () => {
     const engine = engineRef.current;
     engine.worldStep();
+    engine.recordIntervention('simulation.single_step');
     syncStateFromEngine();
   };
 
   const handleSetSpeed = (spd: number) => {
     engineRef.current.speed = spd;
+    engineRef.current.recordIntervention('simulation.speed.change', { speed: spd });
     setSpeed(spd);
   };
 
@@ -140,11 +161,97 @@ export default function App() {
     for (let i = 0; i < 250; i++) {
       engine.worldStep();
     }
+    engine.recordIntervention('simulation.epoch_leap', { steps: 250 });
     syncStateFromEngine();
   };
 
   const handleReset = () => {
-    engineRef.current.reset(currentPreset);
+    engineRef.current.reset(currentPreset, engineRef.current.seed);
+    engineRef.current.recordIntervention('world.reset', { preset: currentPreset, seed: engineRef.current.seed });
+    runIdRef.current = createRunId();
+    setSelectedAgentId(null);
+    prevEpochRef.current = 1;
+    syncStateFromEngine();
+  };
+
+  const handleExportRun = () => {
+    const engine = engineRef.current;
+    const run = {
+      format: "synthetic-reality-run",
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      engineVersion: "0.1.0",
+      seed: engine.seed,
+      preset: currentPreset,
+      tick: engine.tick,
+      epoch: engine.epoch,
+      config: engine.config,
+      snapshot: engine.createFullSnapshot(),
+      logs: engine.logs,
+      interventions: engine.interventions
+    };
+    const blob = new Blob([JSON.stringify(run, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `synthetic-reality-${currentPreset}-seed-${engine.seed}-tick-${engine.tick}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportRun = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const run = JSON.parse(await file.text());
+      if (run?.format !== 'synthetic-reality-run' || run?.formatVersion !== 1 ||
+          typeof run.preset !== 'string' || !run.snapshot) {
+        throw new Error('Unsupported run file. Expected Synthetic Reality Run version 1.');
+      }
+      const nextEngine = new SimulationEngine(run.preset as WorldPresetId, run.seed);
+      nextEngine.restoreRunSnapshot(run.snapshot, run.seed, run.preset as WorldPresetId);
+      nextEngine.recordIntervention('run.import', { source: 'json_file' });
+      runIdRef.current = createRunId();
+      engineRef.current = nextEngine;
+      setCurrentPreset(run.preset as WorldPresetId);
+      setSeedInput(String(nextEngine.seed));
+      setSelectedAgentId(null);
+      setIsRunning(false);
+      nextEngine.isRunning = false;
+      prevEpochRef.current = nextEngine.epoch;
+      syncStateFromEngine();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Could not import run file.');
+    }
+  };
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('synthetic-reality:last-run');
+      if (!saved) return;
+      const run = JSON.parse(saved);
+      if (run?.format === 'synthetic-reality-run' && run?.formatVersion === 1) {
+        const restored = new SimulationEngine(run.preset as WorldPresetId, run.seed);
+        restored.restoreRunSnapshot(run.snapshot, run.seed, run.preset as WorldPresetId);
+        restored.isRunning = true;
+        engineRef.current = restored;
+        setCurrentPreset(run.preset as WorldPresetId);
+        setSeedInput(String(restored.seed));
+        prevEpochRef.current = restored.epoch;
+        syncStateFromEngine();
+      }
+    } catch (error) {
+      console.warn('Saved run could not be restored; starting a fresh simulation.', error);
+    }
+  }, [syncStateFromEngine]);
+
+  const handleApplySeed = () => {
+    const parsed = Number(seedInput);
+    if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > 0xffffffff) return;
+    engineRef.current.reset(currentPreset, parsed);
+    engineRef.current.recordIntervention('world.seed.reset', { preset: currentPreset, seed: parsed });
+    runIdRef.current = createRunId();
     setSelectedAgentId(null);
     prevEpochRef.current = 1;
     syncStateFromEngine();
@@ -152,11 +259,13 @@ export default function App() {
 
   const handleTriggerDisaster = (type: any) => {
     engineRef.current.triggerDisaster(type);
+    engineRef.current.recordIntervention('disaster.trigger', { type });
     syncStateFromEngine();
   };
 
   const handleUpdateConfig = (newCfg: Partial<WorldConfig>) => {
     engineRef.current.config = { ...engineRef.current.config, ...newCfg };
+    engineRef.current.recordIntervention('world.config.update', newCfg as Record<string, unknown>);
   };
 
   const handleInjectThought = async (agentId: string, thoughtText: string) => {
@@ -167,6 +276,7 @@ export default function App() {
     agent.goal = `Responding to neural directive: "${thoughtText.slice(0, 30)}..."`;
     agent.thoughtTimer = 200;
     agent.memory = [...(agent.memory || []).slice(-8), `Direct neural directive: ${thoughtText}`];
+    engineRef.current.recordIntervention('agent.directive', { agentId, directive: thoughtText });
 
     try {
       const res = await fetch('/api/agent-thought', {
@@ -195,6 +305,7 @@ export default function App() {
       agent.energy = agent.maxEnergy;
       agent.currentThought = 'Vitality restored by Architect.';
       agent.thoughtTimer = 100;
+      engineRef.current.recordIntervention('agent.heal', { agentId });
       syncStateFromEngine();
     }
   };
@@ -205,6 +316,7 @@ export default function App() {
       agent.wealth += 50;
       agent.currentThought = 'Assets subsidized by the Architect.';
       agent.thoughtTimer = 100;
+      engineRef.current.recordIntervention('agent.wealth_boost', { agentId, amount: 50 });
       syncStateFromEngine();
     }
   };
@@ -216,13 +328,14 @@ export default function App() {
         name: `${agent.name}-Clone`,
         role: agent.role,
         factionId: agent.factionId,
-        x: agent.x + (Math.random() - 0.5) * 30,
-        y: agent.y + (Math.random() - 0.5) * 30,
+        x: agent.x + (engineRef.current.sampleRandom() - 0.5) * 30,
+        y: agent.y + (engineRef.current.sampleRandom() - 0.5) * 30,
         color: agent.color,
         parentGenetics: agent.genetics,
         generation: agent.generation + 1
       });
       engineRef.current.addLog('emergence', 'Agent Cloned', `${clone.name} cloned from ${agent.name}.`, 'high');
+      engineRef.current.recordIntervention('agent.clone', { sourceAgentId: agentId, cloneId: clone.id });
       setSelectedAgentId(clone.id);
       syncStateFromEngine();
     }
@@ -231,8 +344,8 @@ export default function App() {
   const handleSpawnCustomAgent = (params: any) => {
     const engine = engineRef.current;
     const faction = engine.factions.find(f => f.id === params.factionId) || engine.factions[0];
-    const spawnX = faction.territoryCenter.x + (Math.random() - 0.5) * 50;
-    const spawnY = faction.territoryCenter.y + (Math.random() - 0.5) * 50;
+    const spawnX = faction.territoryCenter.x + (engine.sampleRandom() - 0.5) * 50;
+    const spawnY = faction.territoryCenter.y + (engine.sampleRandom() - 0.5) * 50;
 
     const newAgent = engine.createAgent({
       name: params.name,
@@ -254,6 +367,7 @@ export default function App() {
     });
 
     engine.addLog('emergence', 'Unit Instantiated', `${newAgent.name} (${newAgent.role}) spawned into ${faction.name}.`, 'high');
+    engine.recordIntervention('agent.spawn', { agentId: newAgent.id, name: newAgent.name, role: newAgent.role, factionId: faction.id });
     setSelectedAgentId(newAgent.id);
     syncStateFromEngine();
   };
@@ -263,6 +377,7 @@ export default function App() {
     const engine = engineRef.current;
     if (cosmicTool && cosmicTool !== 'none' && cosmicTool !== 'inspect') {
       engine.triggerCosmicTool(cosmicTool, x, y);
+      engine.recordIntervention('cosmic_tool.apply', { tool: cosmicTool, x, y });
       syncStateFromEngine();
     }
   };
@@ -270,17 +385,20 @@ export default function App() {
   // Weather System Manual Trigger
   const handleSetWeather = (type: WeatherType) => {
     engineRef.current.triggerWeatherCycle(type);
+    engineRef.current.recordIntervention('weather.set', { type });
     syncStateFromEngine();
   };
 
   // Multiverse Fork & Jump
   const handleForkTimeline = (name: string, description: string) => {
     const newForkId = engineRef.current.forkTimeline(name, description);
+    engineRef.current.recordIntervention('timeline.fork', { name, description, forkId: newForkId });
     syncStateFromEngine();
   };
 
   const handleSwitchTimeline = (forkId: string) => {
     engineRef.current.switchTimeline(forkId);
+    engineRef.current.recordIntervention('timeline.switch', { forkId });
     setSelectedAgentId(null);
     syncStateFromEngine();
   };
@@ -300,6 +418,7 @@ export default function App() {
       votesAgainst: []
     };
     engineRef.current.laws = [newLaw, ...engineRef.current.laws];
+    engineRef.current.recordIntervention('governance.decree', { lawId: newLaw.id, title: newLaw.title, category: newLaw.category, effects: newLaw.effects });
     audioEngine.playLawSound();
     engineRef.current.addLog('diplomacy', 'Supreme Decree Enacted', `Universal law "${newLaw.title}" promulgated across all realms.`, 'critical');
     syncStateFromEngine();
@@ -310,6 +429,30 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-sky-500 selection:text-black">
+      <AccountPanel
+        currentRun={{
+          id: runIdRef.current,
+          name: `${engineRef.current.config.name} · seed ${engineRef.current.seed}`,
+          preset: engineRef.current.config.presetId,
+          seed: engineRef.current.seed,
+          tick: engineRef.current.tick,
+          snapshot: engineRef.current.createFullSnapshot()
+        }}
+        onRestore={(run) => {
+          const restored = new SimulationEngine(run.preset as WorldPresetId, run.seed);
+          restored.restoreRunSnapshot(run.snapshot as TimelineFork['snapshotState'], run.seed, run.preset as WorldPresetId);
+          restored.isRunning = false;
+          engineRef.current = restored;
+          runIdRef.current = run.id;
+          setCurrentPreset(run.preset as WorldPresetId);
+          setSeedInput(String(run.seed));
+          setIsRunning(false);
+          setSelectedAgentId(null);
+          prevEpochRef.current = restored.epoch;
+          syncStateFromEngine();
+        }}
+      />
+
       
       {/* Top Command Header */}
       <Header
@@ -334,6 +477,19 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+        <section className="flex flex-col sm:flex-row sm:items-end gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+          <div className="flex-1">
+            <label htmlFor="simulation-seed" className="block text-xs font-semibold uppercase tracking-wider text-slate-400">Experiment seed (0–4,294,967,295)</label>
+            <input id="simulation-seed" inputMode="numeric" pattern="[0-9]*" value={seedInput} onChange={event => setSeedInput(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100" aria-describedby="seed-help" />
+            <p id="seed-help" className="mt-1 text-xs text-slate-500">Use the same seed and preset to reproduce the same engine run. Applying a seed restarts the world.</p>
+          </div>
+          <button type="button" onClick={handleApplySeed} disabled={seedInput.length === 0 || !Array.from(seedInput).every(char => char >= '0' && char <= '9') || !Number.isSafeInteger(Number(seedInput)) || Number(seedInput) > 0xffffffff} className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-40">Apply seed & restart</button>
+          <button type="button" onClick={handleExportRun} className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800">Export snapshot</button>
+          <label className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-800 cursor-pointer">
+            Import snapshot
+            <input type="file" accept="application/json,.json" onChange={handleImportRun} className="sr-only" />
+          </label>
+        </section>
         
         {/* VIEW 1: Live Interactive Reality Canvas & Cosmic Manipulator */}
         {activeView === 'canvas' && (
