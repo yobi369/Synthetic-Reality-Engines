@@ -74,3 +74,14 @@ The engine is an artificial-world sandbox. A plausible-looking emergent pattern 
 The browser run format is versioned JSON. It contains the seed, preset, engine snapshot, and run metadata. Import validates metadata and required state collections before replacing the active engine. The engine snapshot captures world entities, configuration, weather, logs/history, and PRNG state. Legacy version-one exports without the later optional log/history collections are accepted with empty collections.
 
 The UI also writes periodic snapshots to browser local storage. This is best-effort single-browser recovery, not durable server storage: storage may be cleared, quota-limited, or unavailable. Portable exports remain the recommended backup. No account, synchronization, encryption-at-rest, or server-side run repository is implemented.
+
+
+## Server persistence and identity boundary
+
+The Express API owns account identity and persisted runs; the browser simulation remains the active simulation authority. The current persistence adapter is a versioned JSON document store in `DATA_DIR`. Writes are serialized in-process and committed by temporary-file replacement. Version 1 data is migrated to version 2 by adding the intervention collection. This adapter supports one server process on a persistent local volume; it is not a distributed database and does not provide cross-instance locking.
+
+Accounts use scrypt-derived password hashes with unique salts. Sessions use random bearer tokens; only token hashes are stored. Authenticated routes scope every run and intervention query by owner ID. The React account panel keeps the active token in memory and sends it as an Authorization bearer token. Deploy behind HTTPS. The server-side store must live outside the public static directory and on a persistent, access-restricted volume.
+
+The API supports registration, login, current-user lookup, logout, owner-scoped run create/list/read/delete, and append-only intervention ingestion. Event IDs are idempotent per owner/run. The client sends the engine's intervention ledger when saving a run, so the portable snapshot and server audit collection can be reconciled.
+
+Before multi-instance scaling, replace the JSON adapter and in-process rate limiter with a transactional database, shared session storage, and distributed abuse controls.
