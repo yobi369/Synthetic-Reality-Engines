@@ -518,7 +518,7 @@ export function runMechanisticLteeValidation(csv: string) {
       dailyTransferRatio: 100,
       generationsPerTransfer: LTEE_GENERATIONS_PER_TRANSFER,
       computationalBottleneck: DEFAULT_LTEE_PARAMETERS.effectiveBottleneck,
-      bottleneckNote: 'Scaled effective inoculum for tractable forward simulation; not the LTEE census population.',
+      bottleneckNote: '5e6 transfer bottleneck following the published Good & Desai model scale; cells are represented as aggregated fitness classes, not individually enumerated.',
       mutationTiming: 'Beneficial mutations arise at the end of batch growth and affect descendants in the next transfer cycle.',
       dfe: 'Exponential beneficial-effect distribution with background-dependent mean (diminishing returns).',
       assay: 'Mix evolved population with its marked ancestor and calculate competition outcomes from logit changes over the measured ancestor log-fold-change.'
