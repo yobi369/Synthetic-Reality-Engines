@@ -1064,10 +1064,6 @@ export class SimulationEngine {
       x: (a1.x + a2.x) / 2,
       y: Math.min(a1.y, a2.y) - 24,
       tick: this.tick,
-      disasters: structuredClone(this.disasters),
-      dialogues: structuredClone(this.dialogues),
-      logs: structuredClone(this.logs),
-      history: structuredClone(this.history),
       duration: 70
     };
   }
