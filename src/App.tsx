@@ -136,17 +136,20 @@ export default function App() {
   const handleToggleRun = () => {
     const engine = engineRef.current;
     engine.isRunning = !engine.isRunning;
+    engine.recordIntervention(engine.isRunning ? 'simulation.resume' : 'simulation.pause');
     setIsRunning(engine.isRunning);
   };
 
   const handleStep = () => {
     const engine = engineRef.current;
     engine.worldStep();
+    engine.recordIntervention('simulation.single_step');
     syncStateFromEngine();
   };
 
   const handleSetSpeed = (spd: number) => {
     engineRef.current.speed = spd;
+    engineRef.current.recordIntervention('simulation.speed.change', { speed: spd });
     setSpeed(spd);
   };
 
@@ -155,6 +158,7 @@ export default function App() {
     for (let i = 0; i < 250; i++) {
       engine.worldStep();
     }
+    engine.recordIntervention('simulation.epoch_leap', { steps: 250 });
     syncStateFromEngine();
   };
 
