@@ -28,7 +28,10 @@ This roadmap distinguishes verified implementation work from remaining operation
 - [ ] Add full run manifests including immutable source revision and complete execution environment.
 - [ ] Add batch runs, sensitivity analysis and confidence intervals.
 - [x] Select and pin the LTEE public reference dataset; implement a reproducible, per-population temporal holdout benchmark for published adaptation-curve families.
-- [ ] Independently reproduce the benchmark and connect the engine to an experimentally faithful, calibrated microbial subsystem before making engine-level scientific claims.
+- [x] Implement a separate LTEE forward-time subsystem with heritable selection coefficients, beneficial mutation, diminishing-returns effects, daily 1:100 serial transfer and ancestor competition assays.
+- [x] Calibrate on six complete non-mutator populations and evaluate a pre-held temporal test split; compare five fitness encodings and profile parameter sensitivity.
+- [ ] Obtain external independent researcher reproduction and review before claiming independent scientific replication.
+- [ ] Connect the generic agent-based microbial preset only after a defensible genotype/resource/fitness mapping and separate acceptance study.
 
 ## Stage 4 — Performance and scale
 
