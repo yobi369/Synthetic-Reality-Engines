@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import {
   aggregateReplicates,
+  bootstrapCalibrationUncertainty,
   bootstrapPopulationRmse,
   fitCandidateModels,
   parseFitnessCsv,
@@ -54,6 +55,10 @@ describe('LTEE empirical validation pipeline', () => {
     expect(result.perPopulationHoldout).toHaveLength(12);
     const split = temporalSplit(aggregateReplicates(parseFitnessCsv(csv)));
     const model = fitCandidateModels(split.train)[0];
+    const calibration = bootstrapCalibrationUncertainty(split.train, 44, 30);
+    expect(calibration.iterations).toBe(30);
+    expect(calibration.modelSelectionFrequency['power-law'] + calibration.modelSelectionFrequency.saturating + calibration.modelSelectionFrequency.baseline).toBeCloseTo(1, 4);
+    expect(calibration.conditionalParameterIntervals95['power-law'].exponent[0]).toBeLessThanOrEqual(calibration.conditionalParameterIntervals95['power-law'].exponent[1]);
     expect(bootstrapPopulationRmse(split.test, model.predict)).toEqual(
       bootstrapPopulationRmse(split.test, model.predict)
     );
