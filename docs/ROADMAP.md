@@ -58,3 +58,18 @@ A research release requires reproducible seeded runs, validated export/import, d
 - [ ] Cloud persistence, multi-user access controls, and server-side retention.
 - [ ] Schema migration framework beyond the current version-one compatibility path.
 - [ ] Scientific validation and benchmark baselines for emergent behavior.
+
+
+## Engineering gate update
+
+- [x] Server-side account registration and login with scrypt password derivation.
+- [x] Hashed bearer sessions with expiry and revocation.
+- [x] Owner-scoped run save/list/read/delete API.
+- [x] Append-only intervention event storage and retrieval API.
+- [x] Versioned file-store schema with v1-to-v2 migration path and atomic replacement writes.
+- [x] Snapshot includes full observable state and intervention ledger.
+- [x] Deterministic multi-preset computational validation tests and a documented empirical validation protocol.
+- [ ] Wire the account and cloud-run workflows into the React user interface.
+- [ ] Replace the single-instance JSON store with a transactional managed database before horizontal scaling.
+- [ ] Validate deployment on a persistent volume, including backup/restore and restart recovery.
+- [ ] Complete CI, independent review, and empirical validation against a domain-specific reference dataset.
