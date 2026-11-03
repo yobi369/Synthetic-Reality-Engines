@@ -84,6 +84,7 @@ describe("seeded timeline restoration", () => {
   test("restored timeline continues from its captured random state", () => {
     const engine = new SimulationEngine("microbial", 909);
     for (let i = 0; i < 8; i++) engine.worldStep();
+    engine.recordIntervention('test.before_fork', { checkpoint: 8 });
     const fork = engine.forkTimeline("checkpoint", "determinism test");
     for (let i = 0; i < 12; i++) engine.worldStep();
     expect(engine.switchTimeline(fork.id)).toBe(true);
@@ -94,6 +95,7 @@ describe("seeded timeline restoration", () => {
     expect(engine.agents).toEqual(replay.agents);
     expect(engine.resources).toEqual(replay.resources);
     expect(engine.tick).toBe(replay.tick);
+    expect(engine.interventions).toContainEqual(expect.objectContaining({ action: 'test.before_fork', tick: 8 }));
   });
 });
 
