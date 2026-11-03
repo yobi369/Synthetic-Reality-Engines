@@ -330,8 +330,8 @@ export default function App() {
   const handleSpawnCustomAgent = (params: any) => {
     const engine = engineRef.current;
     const faction = engine.factions.find(f => f.id === params.factionId) || engine.factions[0];
-    const spawnX = faction.territoryCenter.x + (Math.random() - 0.5) * 50;
-    const spawnY = faction.territoryCenter.y + (Math.random() - 0.5) * 50;
+    const spawnX = faction.territoryCenter.x + (engine.sampleRandom() - 0.5) * 50;
+    const spawnY = faction.territoryCenter.y + (engine.sampleRandom() - 0.5) * 50;
 
     const newAgent = engine.createAgent({
       name: params.name,
