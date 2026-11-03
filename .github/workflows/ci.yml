@@ -34,8 +34,15 @@ jobs:
       - name: Empirical LTEE benchmark
         run: bun run research:ltee
       - name: LTEE mechanistic calibration and holdout validation
-        run: bun run research:ltee-mechanistic > /tmp/ltee-mechanistic-report.json
+        run: bun run research:ltee-mechanistic | tee /tmp/ltee-mechanistic-report.json
       - name: Independent Python reproduction of selected fits
         run: python3 research/reproduction/verify_ltee_reference.py /tmp/ltee-mechanistic-report.json
+      - name: Upload LTEE mechanistic report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ltee-mechanistic-report
+          path: /tmp/ltee-mechanistic-report.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Production build
         run: bun run build
