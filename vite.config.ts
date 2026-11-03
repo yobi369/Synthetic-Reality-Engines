@@ -40,12 +40,6 @@ function sreApiPlugin(): Plugin {
           });
         };
 
-        if (req.url === '/api/health') {
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ status: 'ok', engine: 'Synthetic Reality Engine Core v2.4' }));
-          return;
-        }
-
         if (req.url === '/api/chronicler' && req.method === 'POST') {
           const body = await readBody();
           const { worldName, epoch, population, factions, topEvents, economicStats, userPrompt } = body;
