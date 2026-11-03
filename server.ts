@@ -14,7 +14,23 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 
-app.use(express.json());
+app.use(express.json({ limit: '20mb' }));
+const authAttempts = new Map<string, { count: number; resetAt: number }>();
+function rateLimit(key: string, maximum: number): boolean {
+  const now = Date.now(); const entry = authAttempts.get(key);
+  if (!entry || entry.resetAt <= now) { authAttempts.set(key, { count: 1, resetAt: now + 60_000 }); return true; }
+  entry.count += 1; return entry.count <= maximum;
+}
+async function requireUser(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const header = req.header('authorization') || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  if (!token) return res.status(401).json({ error: 'Authentication required.' });
+  const user = await findSession(token);
+  if (!user) return res.status(401).json({ error: 'Session expired or invalid.' });
+  (req as any).user = user; (req as any).sessionToken = token; next();
+}
+const safeUser = (user: { id: string; email: string }) => ({ id: user.id, email: user.email });
+
 
 // Lazy-initialize Gemini AI client safely
 function getGeminiClient(): GoogleGenAI | null {
