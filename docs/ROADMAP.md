@@ -69,7 +69,7 @@ A research release requires reproducible seeded runs, validated export/import, d
 - [x] Versioned file-store schema with v1-to-v2 migration path and atomic replacement writes.
 - [x] Snapshot includes full observable state and intervention ledger.
 - [x] Deterministic multi-preset computational validation tests and a documented empirical validation protocol.
-- [ ] Wire the account and cloud-run workflows into the React user interface.
+- [x] Wire account registration/login and private run save/restore into the React user interface.
 - [ ] Replace the single-instance JSON store with a transactional managed database before horizontal scaling.
 - [ ] Validate deployment on a persistent volume, including backup/restore and restart recovery.
 - [ ] Complete CI, independent review, and empirical validation against a domain-specific reference dataset.
