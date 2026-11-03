@@ -20,10 +20,10 @@ export function AccountPanel({ currentRun, onRestore }: Props) {
   const [busy, setBusy] = useState(false);
 
   async function request(path: string, options: RequestInit = {}) {
-    const response = await fetch(path, {
-      ...options,
-      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}), ...options.headers }
-    });
+    const headers = new Headers(options.headers);
+    headers.set('Content-Type', 'application/json');
+    if (token) headers.set('Authorization', 'Bearer ' + token);
+    const response = await fetch(path, { ...options, headers });
     const data = response.status === 204 ? null : await response.json();
     if (!response.ok) throw new Error(data?.error || 'Request failed.');
     return data;
