@@ -32,7 +32,8 @@ This roadmap distinguishes verified implementation work from remaining operation
 - [x] Add repeatable multi-preset, multi-seed performance benchmark runner.
 - [x] Add a versioned, SHA-256 content-addressed experiment-manifest utility with source revision, configuration, seed, ordered interventions, operation sequence and runtime metadata.
 - [x] Attach experiment manifests to browser JSON run exports and verify their digest during import when present.
-- [ ] Extend manifest persistence to account-backed saves and add cross-version migration/compatibility tests.
+- [x] Persist and verify manifests in account-backed saves; migrate v1 and v2 JSON stores to schema v3 without dropping existing runs or intervention ledgers.
+- [ ] Add cross-version manifest format compatibility tests and end-to-end hosted backup/restore acceptance.
 - [x] Add a deterministic multi-seed batch runner with repeat-run metrics, sample standard deviation and 95% confidence intervals.
 - [ ] Add parameter-grid sensitivity analysis and bootstrap confidence intervals.
 - [x] Select and pin the LTEE public reference dataset; implement a reproducible, per-population temporal holdout benchmark for published adaptation-curve families.
