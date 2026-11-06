@@ -6,6 +6,7 @@ import { GoogleGenAI } from '@google/genai';
 import { randomBytes } from 'node:crypto';
 import { applySecurityHeaders, createRateLimiter } from './server/security';
 import { validateAgentThoughtInput, validateChroniclerInput } from './server/ai-validation';
+import { verifyExperimentManifest } from './research/experiment-manifest';
 import { appendIntervention, authenticateUser, createSession, deleteRun, findSession, getRun, listInterventions, listRuns, registerUser, revokeSession, saveRun, storageHealth } from './server/storage';
 
 dotenv.config();
@@ -60,7 +61,8 @@ app.get('/api/runs', requireUser, async (req, res) => res.json({ runs: await lis
 app.post('/api/runs', requireUser, async (req, res) => {
   const b = req.body || {};
   if (typeof b.id !== 'string' || b.id.length > 100 || typeof b.name !== 'string' || b.name.length > 120 || typeof b.preset !== 'string' || !Number.isInteger(b.seed) || b.seed < 0 || b.seed > 0xffffffff || !Number.isInteger(b.tick) || b.tick < 0 || !b.snapshot || typeof b.snapshot !== 'object') return res.status(400).json({ error: 'Invalid run payload.' });
-  try { const run = await saveRun((req as any).user.id, { id: b.id, name: b.name, preset: b.preset, seed: b.seed, tick: b.tick, snapshot: b.snapshot }); res.status(201).json({ run: { id: run.id, name: run.name, preset: run.preset, seed: run.seed, tick: run.tick, createdAt: run.createdAt, updatedAt: run.updatedAt } }); }
+  if (b.manifest !== undefined && !await verifyExperimentManifest(b.manifest)) return res.status(400).json({ error: 'Experiment manifest integrity check failed.' });
+  try { const run = await saveRun((req as any).user.id, { id: b.id, name: b.name, preset: b.preset, seed: b.seed, tick: b.tick, snapshot: b.snapshot, manifest: b.manifest }); res.status(201).json({ run: { id: run.id, name: run.name, preset: run.preset, seed: run.seed, tick: run.tick, createdAt: run.createdAt, updatedAt: run.updatedAt } }); }
   catch { res.status(500).json({ error: 'Could not save run.' }); }
 });
 app.get('/api/runs/:id', requireUser, async (req, res) => { const run = await getRun((req as any).user.id, req.params.id); if (!run) return res.status(404).json({ error: 'Run not found.' }); res.json({ run }); });
