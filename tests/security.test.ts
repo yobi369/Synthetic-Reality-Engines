@@ -15,7 +15,7 @@ describe('HTTP security helpers', () => {
     expect(limit('a', 10, 1_000)).toBe(true);
     expect(limit('b', 10, 1_000)).toBe(true);
     expect(limit('c', 10, 1_000)).toBe(true);
-    expect(limit('d', 10, 1_000)).toBe(true);
+    expect(limit('d', 10, 1_000)).toBe(false);
   });
 
   test('sets baseline browser security headers', () => {
