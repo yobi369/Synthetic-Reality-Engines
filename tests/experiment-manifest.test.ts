@@ -13,32 +13,32 @@ const input = {
 } as const;
 
 describe('experiment provenance manifests', () => {
-  test('creates a verifiable, content-addressed manifest', () => {
-    const manifest = createExperimentManifest(input);
+  test('creates a verifiable, content-addressed manifest', async () => {
+    const manifest = await createExperimentManifest(input);
     expect(manifest.schemaVersion).toBe(1);
     expect(manifest.digest).toMatch(/^[a-f0-9]{64}$/);
-    expect(verifyExperimentManifest(manifest)).toBe(true);
+    expect(await verifyExperimentManifest(manifest)).toBe(true);
   });
 
-  test('canonical digest does not depend on object key insertion order', () => {
-    const first = createExperimentManifest(input);
-    const reordered = createExperimentManifest({ ...input, configuration: { populationCap: 500, world: { width: 100, height: 80 } } });
+  test('canonical digest does not depend on object key insertion order', async () => {
+    const first = await createExperimentManifest(input);
+    const reordered = await createExperimentManifest({ ...input, configuration: { populationCap: 500, world: { width: 100, height: 80 } } });
     expect(first.digest).toBe(reordered.digest);
   });
 
-  test('detects any post-creation experiment modification', () => {
+  test('detects any post-creation experiment modification', async () => {
     const manifest = createExperimentManifest(input);
     const altered = { ...manifest, seed: 43 };
-    expect(verifyExperimentManifest(altered)).toBe(false);
+    expect(await verifyExperimentManifest(altered)).toBe(false);
   });
 
-  test('rejects unordered or duplicate intervention events', () => {
-    expect(() => createExperimentManifest({ ...input, interventions: [...input.interventions].reverse() })).toThrow();
-    expect(() => createExperimentManifest({ ...input, interventions: [input.interventions[0], { ...input.interventions[1], id: 'event-1' }] })).toThrow();
+  test('rejects unordered or duplicate intervention events', async () => {
+    await expect(createExperimentManifest({ ...input, interventions: [...input.interventions].reverse() })).rejects.toThrow();
+    await expect(createExperimentManifest({ ...input, interventions: [input.interventions[0], { ...input.interventions[1], id: 'event-1' }] })).rejects.toThrow();
   });
 
-  test('rejects invalid seeds and non-finite values', () => {
-    expect(() => createExperimentManifest({ ...input, seed: -1 })).toThrow();
-    expect(() => createExperimentManifest({ ...input, configuration: { invalid: Number.NaN } })).toThrow();
+  test('rejects invalid seeds and non-finite values', async () => {
+    await expect(createExperimentManifest({ ...input, seed: -1 })).rejects.toThrow();
+    await expect(createExperimentManifest({ ...input, configuration: { invalid: Number.NaN } })).rejects.toThrow();
   });
 });
