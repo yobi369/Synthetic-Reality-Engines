@@ -109,7 +109,9 @@ export function runParameterGridSensitivity(input: {
     const values = results.map(result => result.overrides[parameter]!);
     if (new Set(values).size < 2 || results.length < 3) continue;
     for (const metric of METRICS) {
-      const correlation = pearsonCorrelation(values, results.map(result => result.aggregate[metric].mean));
+      const metricValues = results.map(result => result.aggregate[metric].mean);
+      if (new Set(metricValues).size < 2) continue;
+      const correlation = pearsonCorrelation(values, metricValues);
       for (const result of results) result.parameterCorrelations[`${parameter}:${metric}`] = correlation;
     }
   }
