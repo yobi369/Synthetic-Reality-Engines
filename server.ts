@@ -44,12 +44,12 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 app.post('/api/auth/register', async (req, res) => {
-  if (!rateLimit(req.ip || 'unknown', 5)) return res.status(429).json({ error: 'Too many account attempts.' });
+  if (!rateLimit('register:' + (req.ip || 'unknown'), 5)) return res.status(429).json({ error: 'Too many account attempts.' });
   try { const user = await registerUser(String(req.body?.email || ''), String(req.body?.password || '')); const session = await createSession(user.id); res.status(201).json({ user: safeUser(user), ...session }); }
   catch (error: any) { res.status(400).json({ error: error.message || 'Registration failed.' }); }
 });
 app.post('/api/auth/login', async (req, res) => {
-  if (!rateLimit(req.ip || 'unknown', 10)) return res.status(429).json({ error: 'Too many login attempts.' });
+  if (!rateLimit('login:' + (req.ip || 'unknown'), 10)) return res.status(429).json({ error: 'Too many login attempts.' });
   const user = await authenticateUser(String(req.body?.email || ''), String(req.body?.password || ''));
   if (!user) return res.status(401).json({ error: 'Invalid email or password.' });
   res.json({ user: safeUser(user), ...await createSession(user.id) });
