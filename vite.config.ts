@@ -4,7 +4,7 @@ import path from 'path';
 import { defineConfig, Plugin } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
-import { applySecurityHeaders, createRateLimiter } from './server/security';
+import { applySecurityHeaders, createClientDisconnectSignal, createRateLimiter } from './server/security';
 import { validateAgentThoughtInput, validateChroniclerInput } from './server/ai-validation';
 
 dotenv.config();
@@ -84,7 +84,7 @@ Return JSON with format:
               config: {
                 responseMimeType: 'application/json',
                 httpOptions: { timeout: 20_000, retryOptions: { attempts: 1 } },
-                abortSignal: AbortSignal.timeout(25_000),
+                abortSignal: createClientDisconnectSignal(res, 25_000),
               }
             });
 
@@ -130,7 +130,7 @@ Return JSON:
             const aiRes = await ai.models.generateContent({
               model: 'gemini-2.5-flash',
               contents: prompt,
-              config: { responseMimeType: 'application/json', httpOptions: { timeout: 20_000, retryOptions: { attempts: 1 } }, abortSignal: AbortSignal.timeout(25_000) }
+              config: { responseMimeType: 'application/json', httpOptions: { timeout: 20_000, retryOptions: { attempts: 1 } }, abortSignal: createClientDisconnectSignal(res, 25_000) }
             });
 
             const parsed = JSON.parse(aiRes.text || '{}');
