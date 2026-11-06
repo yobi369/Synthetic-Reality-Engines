@@ -52,8 +52,20 @@ Please provide reviewer identity and relevant expertise, exact commit SHA, comma
 - The interactive `microbial` preset is unvalidated and is not an LTEE model.
 - LTEE subsystem validation is narrow and dataset-specific; it does not validate unrelated presets or mechanisms.
 - Parameter-grid sensitivity results are exploratory. Correlation across grid points is descriptive and is not a causal effect estimate.
-- Intervention replay, worker-based live stepping, transactional shared persistence, hosted restore acceptance and distributed rate limiting remain separate engineering gates.
+- Deterministic intervention replay and alternative-future comparison, worker-based live stepping, a dedicated Supabase PostgreSQL storage backend, and database-backed distributed rate limiting are implemented in the repository. The dedicated database schema has been deployed and verified. Scheduled backup/restore automation and hosted end-to-end acceptance are implemented but still require repository secrets and a configured application deployment before a live drill can be claimed.
 - Provenance manifest integrity verifies declared content consistency, not truthful execution or external attestation.
+
+
+## Engineering implementation status
+
+The following engineering changes are merged into `main`:
+
+- PR #4: research reproducibility, replay and sensitivity analysis, bounded provider requests, security hardening and provenance.
+- PR #14: dedicated Web Worker for live simulation stepping.
+- PR #15: isolated Supabase PostgreSQL backend with JSON local fallback and owner-scoped records.
+- PR #16: shared atomic rate limits, backup/restore workflow and hosted acceptance probe.
+
+The PostgreSQL project is dedicated to this repository. The server does not use it until both `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are configured as server-only secrets. Scheduled backup requires `SUPABASE_DB_URL` and `SUPABASE_PROJECT_REF`; hosted acceptance requires its dedicated test-account secrets. Those live operational checks are pending configuration and must not be described as completed.
 
 ## Review status
 
