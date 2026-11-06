@@ -123,9 +123,9 @@ export async function saveRun(ownerId: string, input: Omit<RunRecord, 'ownerId' 
     return run;
   });
 }
-export async function listRuns(ownerId: string): Promise<Omit<RunRecord, 'snapshot'>[]> {
+export async function listRuns(ownerId: string): Promise<Omit<RunRecord, 'snapshot' | 'manifest'>[]> {
   const store = await readStore();
-  return store.runs.filter(run => run.ownerId === ownerId).map(({ snapshot, ...metadata }) => metadata);
+  return store.runs.filter(run => run.ownerId === ownerId).map(({ snapshot, manifest, ...metadata }) => metadata);
 }
 export async function getRun(ownerId: string, runId: string): Promise<RunRecord | null> {
   const store = await readStore();
