@@ -52,7 +52,7 @@ function applyIntervention(engine: SimulationEngine, event: InterventionEvent): 
         if (typeof current === 'number' && (typeof value !== 'number' || !Number.isFinite(value))) throw new Error(`Invalid numeric configuration field: ${key}.`);
         if (typeof current === 'boolean' && typeof value !== 'boolean') throw new Error(`Invalid boolean configuration field: ${key}.`);
         if (typeof current === 'string' && typeof value !== 'string') throw new Error(`Invalid string configuration field: ${key}.`);
-        (next as Record<string, unknown>)[key] = value;
+        (next as unknown as Record<string, unknown>)[key] = value;
       }
       engine.config = next;
       return;
@@ -196,8 +196,6 @@ export function compareAlternativeFutures(input: {
   alternative.restoreRunSnapshot(forkState, input.seed, input.preset);
   const baselineEvents = [...(input.baselineFutureEvents || [])].filter(event => event.tick >= input.forkTick && event.tick <= input.horizonTick);
   const alternativeEvents = [...input.alternativeFutureEvents].filter(event => event.tick >= input.forkTick && event.tick <= input.horizonTick);
-  const baselineFuture = replayInterventionHistory({ preset: input.preset, seed: input.seed, events: baselineEvents, targetTick: input.horizonTick });
-  const alternativeFuture = replayInterventionHistory({ preset: input.preset, seed: input.seed, events: alternativeEvents, targetTick: input.horizonTick });
   // Restore each branch from the shared fork point before applying its own future event stream.
   baseline.restoreRunSnapshot(forkState, input.seed, input.preset);
   alternative.restoreRunSnapshot(forkState, input.seed, input.preset);
@@ -211,6 +209,5 @@ export function compareAlternativeFutures(input: {
     applyIntervention(alternative, event);
   }
   advanceTo(alternative, input.horizonTick);
-  void baselineFuture; void alternativeFuture;
   return { forkTick: input.forkTick, horizonTick: input.horizonTick, baseline: summarizeFuture(baseline), alternative: summarizeFuture(alternative) };
 }
