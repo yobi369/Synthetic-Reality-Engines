@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { randomBytes } from 'node:crypto';
 import { applySecurityHeaders, createRateLimiter } from './server/security';
+import { validateAgentThoughtInput, validateChroniclerInput } from './server/ai-validation';
 import { appendIntervention, authenticateUser, createSession, deleteRun, findSession, getRun, listInterventions, listRuns, registerUser, revokeSession, saveRun, storageHealth } from './server/storage';
 
 dotenv.config();
@@ -80,7 +81,9 @@ app.post('/api/runs/:id/interventions', requireUser, async (req, res) => {
 app.post('/api/chronicler', async (req, res) => {
   if (!rateLimit('chronicler:' + (req.ip || 'unknown'), 20)) return res.status(429).json({ success: false, error: 'Rate limit exceeded.' });
   try {
-    const { worldName, epoch, population, factions, topEvents, economicStats, userPrompt } = req.body;
+    const input = validateChroniclerInput(req.body);
+    if (!input) return res.status(400).json({ success: false, error: 'Invalid or oversized chronicler request.' });
+    const { worldName, epoch, population, factions, topEvents, economicStats, userPrompt } = input;
     const ai = getGeminiClient();
 
     if (!ai) return res.status(503).json({ success: false, error: 'AI narration is unavailable: GEMINI_API_KEY is not configured.' });
@@ -117,11 +120,10 @@ Return JSON with format:
     try {
       parsed = JSON.parse(text || '{}');
     } catch {
-      parsed = {
-        title: `Chronicles of ${worldName} (Epoch ${epoch})`,
-        chronicle: text || 'The simulation continues to evolve.',
-        recommendation: 'Observe agent survival behaviors.'
-      };
+      return res.status(502).json({ success: false, error: 'AI narration provider returned invalid structured output.' });
+    }
+    if (!parsed || typeof parsed !== 'object' || typeof parsed.title !== 'string' || parsed.title.length > 160 || typeof parsed.chronicle !== 'string' || parsed.chronicle.length > 8_000 || typeof parsed.recommendation !== 'string' || parsed.recommendation.length > 1_000) {
+      return res.status(502).json({ success: false, error: 'AI narration provider returned an invalid response shape.' });
     }
 
     res.json({
@@ -139,7 +141,9 @@ Return JSON with format:
 app.post('/api/agent-thought', async (req, res) => {
   if (!rateLimit('agent-thought:' + (req.ip || 'unknown'), 40)) return res.status(429).json({ success: false, error: 'Rate limit exceeded.' });
   try {
-    const { agent, surroundings, recentMemory } = req.body;
+    const input = validateAgentThoughtInput(req.body);
+    if (!input) return res.status(400).json({ success: false, error: 'Invalid or oversized agent-thought request.' });
+    const { agent, surroundings, recentMemory } = input;
     const ai = getGeminiClient();
 
     if (!ai) return res.status(503).json({ success: false, error: 'AI agent narration is unavailable: GEMINI_API_KEY is not configured.' });
@@ -170,10 +174,10 @@ Return JSON:
     });
 
     const parsed = JSON.parse(response.text || '{}');
-    res.json({
-      success: true,
-      ...parsed
-    });
+    if (!parsed || typeof parsed !== 'object' || typeof parsed.thought !== 'string' || parsed.thought.length > 1_000 || typeof parsed.motive !== 'string' || parsed.motive.length > 120) {
+      return res.status(502).json({ success: false, error: 'AI agent narration provider returned an invalid response shape.' });
+    }
+    res.json({ success: true, thought: parsed.thought, motive: parsed.motive });
   } catch (err) {
     console.error('Error in /api/agent-thought:', err);
     res.status(502).json({ success: false, error: 'AI agent narration provider request failed.' });
