@@ -154,3 +154,25 @@ export async function storageHealth(): Promise<{ schemaVersion: number; users: n
   const store = await readStore();
   return { schemaVersion: store.schemaVersion, users: store.users.length, runs: store.runs.length };
 }
+
+
+// Bounded local fallback used only when shared PostgreSQL is not configured.
+const localRateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+export async function consumeRateLimit(key: string, maximum: number, windowMs: number): Promise<boolean> {
+  if (!Number.isInteger(maximum) || maximum < 1 || !Number.isFinite(windowMs) || windowMs < 1) return false;
+  const now = Date.now();
+  const normalizedKey = key.slice(0, 256) || 'unknown';
+  let entry = localRateLimitBuckets.get(normalizedKey);
+  if (!entry || entry.resetAt <= now) {
+    if (localRateLimitBuckets.size >= 10_000) {
+      for (const [candidate, bucket] of localRateLimitBuckets) {
+        if (bucket.resetAt <= now) localRateLimitBuckets.delete(candidate);
+      }
+      if (localRateLimitBuckets.size >= 10_000) return false;
+    }
+    entry = { count: 0, resetAt: now + windowMs };
+    localRateLimitBuckets.set(normalizedKey, entry);
+  }
+  entry.count += 1;
+  return entry.count <= maximum;
+}
