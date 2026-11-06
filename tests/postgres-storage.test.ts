@@ -78,4 +78,14 @@ describe('Supabase PostgreSQL storage adapter', () => {
     expect(await storage.storageHealth()).toEqual({ schemaVersion: 4, users: 3, runs: 8 });
     expect(requests).toHaveLength(2);
   });
+  test('uses the atomic shared PostgreSQL RPC for distributed rate limiting', async () => {
+    stubFetch(() => new Response('true', { status: 200, headers: { 'content-type': 'application/json' } }));
+    expect(await storage.consumeRateLimit('login:203.0.113.10', 10, 60_000)).toBe(true);
+    expect(requests[0].url).toContain('/rpc/sre_consume_rate_limit');
+    const body = JSON.parse(String(requests[0].init.body));
+    expect(body.p_maximum).toBe(10);
+    expect(body.p_bucket_hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(body.p_bucket_hash).not.toContain('203.0.113.10');
+  });
+
 });

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import type { UserRecord, RunRecord, InterventionRecord } from './storage-json';
 import { createHash } from 'node:crypto';
 
@@ -29,3 +30,4 @@ export const deleteRun = (ownerId: string, runId: string): Promise<boolean> => b
 export const appendIntervention = (record: InterventionRecord): Promise<void> => backend.appendIntervention(record);
 export const listInterventions = (ownerId: string, runId: string): Promise<InterventionRecord[]> => backend.listInterventions(ownerId, runId);
 export const storageHealth = (): Promise<{ schemaVersion: number; users: number; runs: number }> => backend.storageHealth();
+export const consumeRateLimit = (key: string, maximum: number, windowMs: number): Promise<boolean> => backend.consumeRateLimit(key, maximum, windowMs);
