@@ -31,7 +31,8 @@ This roadmap distinguishes verified implementation work from remaining operation
 - [x] Add a versioned, SHA-256 content-addressed experiment-manifest utility with source revision, configuration, seed, ordered interventions, operation sequence and runtime metadata.
 - [x] Attach experiment manifests to browser JSON run exports and verify their digest during import when present.
 - [ ] Extend manifest persistence to account-backed saves and add cross-version migration/compatibility tests.
-- [ ] Add batch runs, sensitivity analysis and confidence intervals.
+- [x] Add a deterministic multi-seed batch runner with repeat-run metrics, sample standard deviation and 95% confidence intervals.
+- [ ] Add parameter-grid sensitivity analysis and bootstrap confidence intervals.
 - [x] Select and pin the LTEE public reference dataset; implement a reproducible, per-population temporal holdout benchmark for published adaptation-curve families.
 - [x] Implement a separate LTEE forward-time subsystem with heritable selection coefficients, beneficial mutation, diminishing-returns effects, daily 1:100 serial transfer and ancestor competition assays.
 - [x] Calibrate on six complete non-mutator populations and evaluate a pre-held temporal test split; compare five fitness encodings and profile parameter sensitivity.
