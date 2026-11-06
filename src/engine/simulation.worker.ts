@@ -91,6 +91,8 @@ function hydrate(command: Extract<WorkerCommand, { type: 'hydrate' }>): void {
 }
 
 workerScope.onmessage = (event: MessageEvent<WorkerCommand>) => {
+  // Dedicated workers should only accept commands from the same origin as the worker script.
+  if (event.origin !== globalThis.location.origin) return;
   const command = event.data;
   try {
     switch (command.type) {
