@@ -59,7 +59,7 @@ This roadmap distinguishes verified implementation work from remaining operation
 - [x] Expiring, revocable bearer sessions; session tokens are stored as hashes.
 - [x] Owner-scoped run create/list/read/delete endpoints and React account UI.
 - [x] Append-only intervention ingestion/retrieval with idempotent event IDs.
-- [x] Versioned single-instance JSON persistence with atomic replacement and v1-to-v2 migration.
+- [x] Versioned single-instance JSON persistence with atomic replacement and v1/v2-to-v3 migration.
 - [x] API input bounds, payload limits, registration/login rate limits and storage readiness check.
 - [ ] Replace the single-instance JSON store and in-process rate limiter with a transactional shared database before multi-instance scaling.
 - [ ] Add automated backup/restore and hosted persistent-volume restart acceptance tests.
