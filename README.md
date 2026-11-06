@@ -80,10 +80,13 @@ For serious experiments, retain the preset, configuration, code revision, seed, 
 
 Contributions should include a clear problem statement, a focused change, tests for changed behaviour and updated documentation where user-facing behaviour or scientific interpretation changes. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## License
+## License and intellectual property
 
-No license is currently declared. Unless a license is added, standard copyright restrictions apply; do not assume the code is open for reuse or redistribution.
+This project is proprietary and **All Rights Reserved**. No open-source license is granted. You may view the public repository, but viewing or accessing it does not grant permission to copy, modify, redistribute, sublicense, commercially exploit, or create derivative works from the project without prior written permission from the copyright holder.
 
+Commercial use, third-party deployment, product integration, redistribution, and derivative development require a separate written license or agreement. Third-party dependencies and other separately licensed materials remain subject to their own license terms.
+
+See the [LICENSE](LICENSE) file for the complete terms. Licensing enquiries can be made through the [GitHub repository owner](https://github.com/yobi369).
 
 ## Run persistence
 
@@ -91,7 +94,6 @@ No license is currently declared. Unless a license is added, standard copyright 
 - The browser periodically autosaves the latest simulation state to local storage and attempts to restore it on the next visit.
 - Snapshot restoration validates core state and restores the PRNG stream so continued simulation can be reproducible.
 - Browser storage is local to the browser profile and may be cleared or quota-limited. Keep exported JSON files as portable backups; this is not cloud or multi-user persistence.
-
 
 ## Server-side accounts and runs
 
