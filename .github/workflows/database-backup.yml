@@ -1,0 +1,74 @@
+name: Database backup and restore drill
+
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup-and-restore:
+    name: Back up dedicated SRE database and verify restore
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: sre_restore
+          POSTGRES_PASSWORD: sre_restore_test
+          POSTGRES_DB: sre_restore
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sre_restore -d sre_restore"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Check backup configuration
+        id: config
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ] || [ "$SUPABASE_PROJECT_REF" != "agnphzqyrjihrpaewwaa" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Set SUPABASE_DB_URL secret and SUPABASE_PROJECT_REF repository variable to enable backups."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Create and verify encrypted-at-rest provider backup artifact
+        if: steps.config.outputs.configured == 'true'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          BACKUP_DIR: ${{ runner.temp }}/sre-backups
+        run: bash scripts/backup-postgres.sh
+      - name: Restore backup into disposable PostgreSQL and verify schema
+        if: steps.config.outputs.configured == 'true'
+        env:
+          RESTORE_TEST_DATABASE_URL: postgresql://sre_restore:sre_restore_test@localhost:5432/sre_restore
+          BACKUP_DIR: ${{ runner.temp }}/sre-backups
+        run: |
+          backup_file="$(find "$BACKUP_DIR" -maxdepth 1 -name '*.dump' -type f | head -n 1)"
+          test -n "$backup_file"
+          pg_restore --clean --if-exists --no-owner --no-acl --exit-on-error --dbname="$RESTORE_TEST_DATABASE_URL" "$backup_file"
+          tables="$(psql "$RESTORE_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -Atc "select count(*) from information_schema.tables where table_schema='public' and table_name in ('sre_users','sre_sessions','sre_runs','sre_interventions','sre_rate_limits')")"
+          test "$tables" = "5"
+          function_present="$(psql "$RESTORE_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -Atc "select to_regprocedure('public.sre_consume_rate_limit(text,timestamp with time zone,integer)') is not null")"
+          test "$function_present" = "t"
+          echo "Disposable restore verified: five application tables and shared rate-limit function are present."
+      - name: Retain verified backup
+        if: steps.config.outputs.configured == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sre-postgres-backup-${{ github.run_id }}
+          path: ${{ runner.temp }}/sre-backups/
+          if-no-files-found: error
+          retention-days: 30
