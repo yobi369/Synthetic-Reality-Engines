@@ -93,6 +93,7 @@ Return JSON with format:
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ success: true, source: 'gemini_ai', ...parsed }));
           } catch (err) {
+            if (res.destroyed) return;
             console.error('Development chronicler provider failure:', err);
             res.statusCode = 502; res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ success: false, error: 'AI narration provider request failed.' }));
@@ -138,6 +139,7 @@ Return JSON:
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ success: true, thought: parsed.thought, motive: parsed.motive }));
           } catch (err) {
+            if (res.destroyed) return;
             console.error('Development agent-thought provider failure:', err);
             res.statusCode = 502; res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ success: false, error: 'AI agent narration provider request failed.' }));
