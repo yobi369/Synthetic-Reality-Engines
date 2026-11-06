@@ -50,6 +50,7 @@ bun run lint
 bun run test
 bun run build
 bun run research:batch -- --preset civilization --seeds 11,22,33 --ticks 1000 --output batch-report.json
+bun run research:sensitivity -- --preset civilization --parameter resourceRegenMultiplier --values 0.5,1,1.5 --seeds 11,22,33 --ticks 1000 --output sensitivity-report.json
 ```
 
 ## Configuration
@@ -71,9 +72,12 @@ Never put provider keys in Vite-exposed variables (for example, `VITE_GEMINI_API
 - The current model is a 2D agent/world simulation. It has deterministic computational regression tests, but no empirical calibration or demonstrated real-world predictive validity.
 - The interactive `microbial` preset is explicitly **UNVALIDATED** and must not be presented as an LTEE or real microbial prediction model. A separate, narrow LTEE research subsystem exists under `src/research/ltee/` and is documented in `docs/EMPIRICAL_LTEE_VALIDATION.md`.
 - AI-generated chronicles are narrative interpretations, not evidence or ground truth.
+- Parameter-grid sensitivity analysis runs paired seeds against a baseline and reports aggregate statistics, paired deltas and descriptive parameter/outcome correlations. These are exploratory results, not causal estimates.
+- Deterministic intervention replay is not yet available. The ledger records user actions, but some existing events omit resolved random inputs or complete spawn parameters; those records cannot yet be replayed faithfully.
+- Live simulation stepping still runs on the main browser thread. The Research Lab batch worker does not move the interactive world loop off-thread.
 - Performance and population limits need formal benchmark coverage before large-scale claims are made.
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ROADMAP.md](docs/ROADMAP.md) and [SECURITY.md](SECURITY.md).
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/EXTERNAL_SCIENTIFIC_REVIEW.md](docs/EXTERNAL_SCIENTIFIC_REVIEW.md) and [SECURITY.md](SECURITY.md).
 
 ## Research and responsible use
 
