@@ -39,7 +39,7 @@ export function ResearchLab() {
     worker.onmessage = (event: MessageEvent<WorkerReply>) => {
       worker.terminate(); workerRef.current = null; setBusy(false);
       if (event.data.ok) { setReport(event.data.report); setStatus('Completed ' + event.data.report.runs.length + ' runs at ' + event.data.report.requestedTicks.toLocaleString() + ' requested ticks each.'); }
-      else setStatus(event.data.error);
+      else setStatus('error' in event.data ? event.data.error : 'Batch experiment failed.');
     };
     worker.onerror = () => { worker.terminate(); workerRef.current = null; setBusy(false); setStatus('Batch worker failed. Check the browser console for details.'); };
     worker.postMessage({ preset, seeds, ticks });
