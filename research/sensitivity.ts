@@ -18,7 +18,7 @@ export interface SensitivityScenario {
   runs: Array<{ seed: number } & Record<Metric, number>>;
   aggregate: Record<Metric, SummaryStatistics>;
   pairedDeltaFromBaseline: Record<Metric, SummaryStatistics>;
-  parameterCorrelations: Partial<Record<SensitivityParameter, number>>;
+  parameterCorrelations: Record<string, number>;
 }
 
 export interface SensitivityReport {
@@ -102,7 +102,7 @@ export function runParameterGridSensitivity(input: {
       metric,
       summarize(runs.map((run, index) => run[metric] - baselineRuns[index][metric])),
     ])) as Record<Metric, SummaryStatistics>;
-    return { overrides, runs, aggregate, pairedDeltaFromBaseline, parameterCorrelations: {} };
+    return { overrides, runs, aggregate, pairedDeltaFromBaseline, parameterCorrelations: {} as Record<string, number> };
   });
 
   for (const parameter of Object.keys(input.grid) as SensitivityParameter[]) {
@@ -110,7 +110,7 @@ export function runParameterGridSensitivity(input: {
     if (new Set(values).size < 2 || results.length < 3) continue;
     for (const metric of METRICS) {
       const correlation = pearsonCorrelation(values, results.map(result => result.aggregate[metric].mean));
-      for (const result of results) result.parameterCorrelations[`${parameter}:${metric}` as SensitivityParameter] = correlation;
+      for (const result of results) result.parameterCorrelations[`${parameter}:${metric}`] = correlation;
     }
   }
 
