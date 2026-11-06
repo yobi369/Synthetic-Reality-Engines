@@ -178,7 +178,7 @@ export default function App() {
     syncStateFromEngine();
   };
 
-  const handleExportRun = () => {
+  const handleExportRun = async () => {
     const engine = engineRef.current;
     const run = {
       format: "synthetic-reality-run",
@@ -193,7 +193,7 @@ export default function App() {
       snapshot: engine.createFullSnapshot(),
       logs: engine.logs,
       interventions: engine.interventions,
-      manifest: /^[a-f0-9]{7,64}$/i.test(__SRE_SOURCE_REVISION__) ? createExperimentManifest({
+      manifest: /^[a-f0-9]{7,64}$/i.test(__SRE_SOURCE_REVISION__) ? await createExperimentManifest({
         experimentId: runIdRef.current,
         sourceRevision: __SRE_SOURCE_REVISION__,
         engineVersion: '0.1.0',
@@ -226,7 +226,7 @@ export default function App() {
           typeof run.preset !== 'string' || !run.snapshot) {
         throw new Error('Unsupported run file. Expected Synthetic Reality Run version 1.');
       }
-      if (run.manifest && !verifyExperimentManifest(run.manifest)) {
+      if (run.manifest && !await verifyExperimentManifest(run.manifest)) {
         throw new Error('Experiment manifest integrity check failed. This run file may have been modified.');
       }
       const nextEngine = new SimulationEngine(run.preset as WorldPresetId, run.seed);
