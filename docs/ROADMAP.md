@@ -29,7 +29,8 @@ This roadmap distinguishes verified implementation work from remaining operation
 - [x] Document experiment provenance and a reference-dataset validation protocol.
 - [x] Add repeatable multi-preset, multi-seed performance benchmark runner.
 - [x] Add a versioned, SHA-256 content-addressed experiment-manifest utility with source revision, configuration, seed, ordered interventions, operation sequence and runtime metadata.
-- [ ] Integrate experiment manifests into the run export/import and account-backed save workflows.
+- [x] Attach experiment manifests to browser JSON run exports and verify their digest during import when present.
+- [ ] Extend manifest persistence to account-backed saves and add cross-version migration/compatibility tests.
 - [ ] Add batch runs, sensitivity analysis and confidence intervals.
 - [x] Select and pin the LTEE public reference dataset; implement a reproducible, per-population temporal holdout benchmark for published adaptation-curve families.
 - [x] Implement a separate LTEE forward-time subsystem with heritable selection coefficients, beneficial mutation, diminishing-returns effects, daily 1:100 serial transfer and ancestor competition assays.
@@ -62,7 +63,7 @@ This roadmap distinguishes verified implementation work from remaining operation
 
 ### Upgrade branch implementation notes
 
-The `upgrade/research-platform-foundation` branch adds bounded HTTP security helpers, baseline response headers, stricter AI request/response validation, explicit provider-unavailable responses instead of fabricated narration, and a content-addressed experiment manifest utility. The rate limiter remains per-process and the manifest utility is not yet wired into the UI/export workflow; neither is presented as a completed production-scale capability.
+The `upgrade/research-platform-foundation` branch adds bounded HTTP security helpers, baseline response headers, stricter AI request/response validation, explicit provider-unavailable responses instead of fabricated narration, and a content-addressed experiment manifest utility integrated into browser JSON run export/import. The rate limiter remains per-process, and account-backed saves do not yet persist the manifest; neither is presented as a completed production-scale capability.
 
 ## Scientific claims boundary
 
