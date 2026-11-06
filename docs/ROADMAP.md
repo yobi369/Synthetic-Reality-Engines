@@ -12,7 +12,8 @@ This roadmap distinguishes verified implementation work from remaining operation
 - [ ] Add automated secret scanning and dependency vulnerability alert verification.
 - [x] Add baseline browser security headers, disable Express fingerprinting, cap JSON request bodies and bound in-process rate-limit memory.
 - [x] Remove fabricated AI narration fallbacks; validate bounded AI request payloads and provider response schemas.
-- [ ] Add provider deadlines/cancellation and shared rate limiting before public multi-instance exposure.
+- [x] Add bounded Gemini request deadlines and disable automatic retries for interactive AI requests.
+- [ ] Propagate client disconnect cancellation and add shared rate limiting before public multi-instance exposure.
 
 ## Stage 2 — Trustworthy simulation core
 
