@@ -35,6 +35,8 @@ export default function App() {
   // Seed is visible and user-selectable for repeatable experiment runs.
   const [seedInput, setSeedInput] = useState<string>(() => String(Date.now() >>> 0));
   const engineRef = useRef<SimulationEngine>(new SimulationEngine('civilization', Number(seedInput)));
+  const workerRef = useRef<Worker | null>(null);
+  const lastAutosavedTickRef = useRef(0);
   const runIdRef = useRef<string>(createRunId());
 
   // UI Reactive States
@@ -60,12 +62,13 @@ export default function App() {
   const prevEpochRef = useRef<number>(1);
 
   // Sync state from engine
-  const syncStateFromEngine = useCallback(() => {
+  const syncStateFromEngine = useCallback((syncWorker = true) => {
     const engine = engineRef.current;
     setTick(engine.tick);
     setEpoch(engine.epoch);
     setPopulation(engine.agents.length);
-    if (engine.tick % 10 === 0) {
+    if (engine.tick >= lastAutosavedTickRef.current + 10) {
+      lastAutosavedTickRef.current = engine.tick;
       try {
         localStorage.setItem('synthetic-reality:last-run', JSON.stringify({
           format: 'synthetic-reality-run', formatVersion: 1, engineVersion: '0.1.0',
@@ -75,6 +78,14 @@ export default function App() {
       } catch (error) {
         console.warn('Autosave skipped (storage unavailable or quota exceeded).', error);
       }
+    }
+
+    if (syncWorker) {
+      workerRef.current?.postMessage({
+        type: 'hydrate', presetId: engine.config.presetId, seed: engine.seed,
+        snapshot: engine.createFullSnapshot(), timelineForks: engine.timelineForks,
+        activeForkId: engine.activeForkId, isRunning: engine.isRunning, speed: engine.speed
+      });
     }
 
     if (engine.epoch > prevEpochRef.current) {
@@ -89,32 +100,49 @@ export default function App() {
     }
   }, []);
 
-  // Main Simulation Loop
+  // The dedicated worker owns all live simulation stepping. The main-thread
+  // engine is a read/write UI mirror for existing panels and user interventions.
   useEffect(() => {
-    let animationFrameId: number;
-    let lastTickTime = performance.now();
+    const worker = new Worker(new URL('./engine/simulation.worker.ts', import.meta.url), { type: 'module' });
+    workerRef.current = worker;
 
-    const loop = (currentTime: number) => {
-      const engine = engineRef.current;
-      if (engine.isRunning) {
-        // Run simulation steps proportional to speed
-        const targetInterval = 1000 / (30 * engine.speed);
-        if (currentTime - lastTickTime >= targetInterval) {
-          const stepsToExecute = Math.min(engine.speed, 20);
-          for (let i = 0; i < stepsToExecute; i++) {
-            engine.worldStep();
-          }
-          lastTickTime = currentTime;
-          syncStateFromEngine();
-        }
+    worker.onmessage = (event: MessageEvent) => {
+      const message = event.data;
+      if (message?.type === 'error') {
+        console.error('Simulation worker:', message.message);
+        return;
       }
-      animationFrameId = requestAnimationFrame(loop);
+      if (message?.type !== 'state') return;
+
+      try {
+        const mirror = engineRef.current;
+        mirror.restoreRunSnapshot(message.snapshot, message.seed, message.presetId);
+        mirror.timelineForks = message.timelineForks;
+        mirror.activeForkId = message.activeForkId;
+        mirror.isRunning = message.isRunning;
+        mirror.speed = message.speed;
+        setIsRunning(message.isRunning);
+        setSpeed(message.speed);
+        setCurrentPreset(message.presetId);
+        syncStateFromEngine(false);
+      } catch (error) {
+        console.error('Could not apply simulation worker state:', error);
+      }
     };
 
-    animationFrameId = requestAnimationFrame(loop);
+    worker.onerror = (event) => {
+      console.error('Simulation worker crashed:', event.message);
+    };
+
+    const engine = engineRef.current;
+    worker.postMessage({
+      type: 'initialize', presetId: engine.config.presetId, seed: engine.seed,
+      isRunning: engine.isRunning, speed: engine.speed
+    });
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      workerRef.current = null;
+      worker.terminate();
     };
   }, [syncStateFromEngine]);
 
@@ -143,30 +171,24 @@ export default function App() {
   const handleToggleRun = () => {
     const engine = engineRef.current;
     engine.isRunning = !engine.isRunning;
-    engine.recordIntervention(engine.isRunning ? 'simulation.resume' : 'simulation.pause');
+    workerRef.current?.postMessage({ type: engine.isRunning ? 'start' : 'pause' });
     setIsRunning(engine.isRunning);
   };
 
   const handleStep = () => {
-    const engine = engineRef.current;
-    engine.worldStep();
-    engine.recordIntervention('simulation.single_step');
-    syncStateFromEngine();
+    workerRef.current?.postMessage({ type: 'step' });
   };
 
   const handleSetSpeed = (spd: number) => {
     engineRef.current.speed = spd;
     engineRef.current.recordIntervention('simulation.speed.change', { speed: spd });
+    workerRef.current?.postMessage({ type: 'set-speed', speed: spd });
     setSpeed(spd);
+    syncStateFromEngine();
   };
 
   const handleEpochLeap = () => {
-    const engine = engineRef.current;
-    for (let i = 0; i < 250; i++) {
-      engine.worldStep();
-    }
-    engine.recordIntervention('simulation.epoch_leap', { steps: 250 });
-    syncStateFromEngine();
+    workerRef.current?.postMessage({ type: 'epoch-leap' });
   };
 
   const handleReset = () => {
@@ -286,6 +308,7 @@ export default function App() {
   const handleUpdateConfig = (newCfg: Partial<WorldConfig>) => {
     engineRef.current.config = { ...engineRef.current.config, ...newCfg };
     engineRef.current.recordIntervention('world.config.update', newCfg as Record<string, unknown>);
+    syncStateFromEngine();
   };
 
   const handleInjectThought = async (agentId: string, thoughtText: string) => {
