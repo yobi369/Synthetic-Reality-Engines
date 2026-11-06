@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { randomBytes } from 'node:crypto';
+import { applySecurityHeaders, createRateLimiter } from './server/security';
 import { appendIntervention, authenticateUser, createSession, deleteRun, findSession, getRun, listInterventions, listRuns, registerUser, revokeSession, saveRun, storageHealth } from './server/storage';
 
 dotenv.config();
@@ -14,13 +15,10 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 
-app.use(express.json({ limit: '20mb' }));
-const authAttempts = new Map<string, { count: number; resetAt: number }>();
-function rateLimit(key: string, maximum: number): boolean {
-  const now = Date.now(); const entry = authAttempts.get(key);
-  if (!entry || entry.resetAt <= now) { authAttempts.set(key, { count: 1, resetAt: now + 60_000 }); return true; }
-  entry.count += 1; return entry.count <= maximum;
-}
+app.disable('x-powered-by');
+app.use(applySecurityHeaders);
+app.use(express.json({ limit: '10mb', strict: true }));
+const rateLimit = createRateLimiter({ windowMs: 60_000, maxEntries: 10_000 });
 async function requireUser(req: express.Request, res: express.Response, next: express.NextFunction) {
   const header = req.header('authorization') || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
@@ -85,22 +83,7 @@ app.post('/api/chronicler', async (req, res) => {
     const { worldName, epoch, population, factions, topEvents, economicStats, userPrompt } = req.body;
     const ai = getGeminiClient();
 
-    if (!ai) {
-      // High-quality deterministic fallback lore generator
-      const fallbackThemes = [
-        `Chronicle of Era ${epoch}: The world of ${worldName} experienced significant societal shifts. Factions navigated resource competition as population reached ${population}.`,
-        `Historical Record: Economists recorded trade volume fluctuations, while pioneer agents pushed the boundaries of known territory.`,
-        `The Great Annals: Observers noted emergent strategic alliances and shifting territory control across the continents.`
-      ];
-      const randomSummary = fallbackThemes[epoch % fallbackThemes.length];
-      return res.json({
-        success: true,
-        source: 'local_engine',
-        title: `Annals of ${worldName} — Epoch ${epoch}`,
-        chronicle: `${randomSummary}\n\nKey Recorded Developments:\n${(topEvents || []).slice(0, 4).map((e: string, i: number) => `• [Year ${epoch}.${i + 1}] ${e}`).join('\n') || '• Continuous steady state operations across all biomes.'}\n\nPhilosophical Note: "In simple rules lie infinite tapestries."`,
-        recommendation: 'Analyze faction wealth disparity and adjust environmental regeneration rate.'
-      });
-    }
+    if (!ai) return res.status(503).json({ success: false, error: 'AI narration is unavailable: GEMINI_API_KEY is not configured.' });
 
     const prompt = `You are the Grand Cosmic Chronicler of a Synthetic Reality Engine named "${worldName}".
 Context of the simulation:
@@ -148,10 +131,7 @@ Return JSON with format:
     });
   } catch (error: any) {
     console.error('Error in /api/chronicler:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to generate chronicle'
-    });
+    res.status(502).json({ success: false, error: 'AI narration provider request failed.' });
   }
 });
 
@@ -162,20 +142,7 @@ app.post('/api/agent-thought', async (req, res) => {
     const { agent, surroundings, recentMemory } = req.body;
     const ai = getGeminiClient();
 
-    if (!ai) {
-      const fallbackMonologues = [
-        `"I must secure more resources before nightfall. My energy is at ${Math.round(agent?.energy || 50)}%."`,
-        `"Trade prices are fluctuating. If I reach the market post soon, I can maximize my profit."`,
-        `"The surrounding biome looks volatile. I should stick close to my faction allies."`,
-        `"Curious anomaly detected nearby. Perhaps knowledge lies waiting to be uncovered."`
-      ];
-      const thought = fallbackMonologues[Math.floor(Math.random() * fallbackMonologues.length)];
-      return res.json({
-        success: true,
-        thought,
-        motive: agent?.goal || 'Survival & Prosperity'
-      });
-    }
+    if (!ai) return res.status(503).json({ success: false, error: 'AI agent narration is unavailable: GEMINI_API_KEY is not configured.' });
 
     const prompt = `You are the inner consciousness of an autonomous agent inside a Synthetic Reality Engine.
 Agent Profile:
@@ -207,8 +174,9 @@ Return JSON:
       success: true,
       ...parsed
     });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+  } catch (err) {
+    console.error('Error in /api/agent-thought:', err);
+    res.status(502).json({ success: false, error: 'AI agent narration provider request failed.' });
   }
 });
 
