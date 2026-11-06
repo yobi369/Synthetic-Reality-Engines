@@ -5,9 +5,14 @@ type BatchRequest = { preset: WorldPresetId; seeds: number[]; ticks: number };
 const workerScope = self as unknown as {
   onmessage: ((event: MessageEvent<BatchRequest>) => void) | null;
   postMessage: (message: unknown) => void;
+  location: Location;
 };
 
 workerScope.onmessage = event => {
+  if (event.origin !== workerScope.location.origin) {
+    workerScope.postMessage({ ok: false, error: 'Untrusted message origin.' });
+    return;
+  }
   try {
     const report = runBatchExperiments(event.data);
     workerScope.postMessage({ ok: true, report });
