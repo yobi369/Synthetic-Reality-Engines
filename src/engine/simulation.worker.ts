@@ -31,6 +31,7 @@ const workerScope = globalThis as typeof globalThis & {
 let engine: SimulationEngine | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let presetId: WorldPresetId = 'civilization';
+let frameCounter = 0;
 
 function publish(): void {
   if (!engine) return;
@@ -61,7 +62,8 @@ function schedule(): void {
     try {
       const steps = Math.max(1, Math.min(20, Math.floor(engine.speed)));
       for (let index = 0; index < steps; index += 1) engine.worldStep();
-      publish();
+      frameCounter += 1;
+      if (frameCounter % 3 === 0) publish();
       schedule();
     } catch (error) {
       engine.isRunning = false;
@@ -105,12 +107,18 @@ workerScope.onmessage = (event: MessageEvent<WorkerCommand>) => {
         hydrate(command);
         break;
       case 'start':
-        if (engine) engine.isRunning = true;
+        if (engine) {
+          engine.isRunning = true;
+          engine.recordIntervention('simulation.resume');
+        }
         publish();
         schedule();
         break;
       case 'pause':
-        if (engine) engine.isRunning = false;
+        if (engine) {
+          engine.isRunning = false;
+          engine.recordIntervention('simulation.pause');
+        }
         stopTimer();
         publish();
         break;
@@ -122,6 +130,7 @@ workerScope.onmessage = (event: MessageEvent<WorkerCommand>) => {
       case 'step':
         if (engine) {
           engine.worldStep();
+          engine.recordIntervention('simulation.single_step');
           publish();
         }
         break;
