@@ -1,0 +1,42 @@
+name: Hosted PostgreSQL acceptance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    name: Verify hosted PostgreSQL persistence and isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check hosted acceptance credentials
+        id: config
+        env:
+          BASE_URL: ${{ secrets.SRE_ACCEPTANCE_BASE_URL }}
+          EMAIL: ${{ secrets.SRE_ACCEPTANCE_EMAIL }}
+          PASSWORD: ${{ secrets.SRE_ACCEPTANCE_PASSWORD }}
+        run: |
+          if [ -z "$BASE_URL" ] || [ -z "$EMAIL" ] || [ -z "$PASSWORD" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Configure SRE_ACCEPTANCE_BASE_URL, SRE_ACCEPTANCE_EMAIL and SRE_ACCEPTANCE_PASSWORD to run hosted acceptance."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Install Bun
+        if: steps.config.outputs.configured == 'true'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Run hosted PostgreSQL acceptance
+        if: steps.config.outputs.configured == 'true'
+        env:
+          SRE_ACCEPTANCE_BASE_URL: ${{ secrets.SRE_ACCEPTANCE_BASE_URL }}
+          SRE_ACCEPTANCE_EMAIL: ${{ secrets.SRE_ACCEPTANCE_EMAIL }}
+          SRE_ACCEPTANCE_PASSWORD: ${{ secrets.SRE_ACCEPTANCE_PASSWORD }}
+          SRE_ACCEPTANCE_SECOND_EMAIL: ${{ secrets.SRE_ACCEPTANCE_SECOND_EMAIL }}
+          SRE_ACCEPTANCE_SECOND_PASSWORD: ${{ secrets.SRE_ACCEPTANCE_SECOND_PASSWORD }}
+        run: bun scripts/hosted-acceptance.ts
