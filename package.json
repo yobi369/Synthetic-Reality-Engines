@@ -16,7 +16,8 @@
     "server:dev": "bun server.ts",
     "benchmark": "bun scripts/benchmark.ts",
     "research:ltee": "bun scripts/empirical-ltee-validation.ts",
-    "research:ltee-mechanistic": "bun scripts/ltee-mechanistic-validation.ts"
+    "research:ltee-mechanistic": "bun scripts/ltee-mechanistic-validation.ts",
+    "research:batch": "bun research/run-batch-experiments.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
