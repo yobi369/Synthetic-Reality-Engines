@@ -160,3 +160,16 @@ export async function storageHealth(): Promise<{ schemaVersion: number; users: n
   const count = (headers: Headers) => Number((headers.get('content-range') || '').split('/')[1] || 0);
   return { schemaVersion: 4, users: count(users.headers), runs: count(runs.headers) };
 }
+
+
+/** Atomically increments a shared fixed-window bucket in PostgreSQL. */
+export async function consumeRateLimit(key: string, maximum: number, windowMs: number): Promise<boolean> {
+  if (!Number.isInteger(maximum) || maximum < 1 || maximum > 100_000 || !Number.isFinite(windowMs) || windowMs < 1) return false;
+  const bucketHash = createHash('sha256').update(key.slice(0, 256) || 'unknown').digest('hex');
+  const windowStart = new Date(Math.floor(Date.now() / windowMs) * windowMs).toISOString();
+  const { data } = await rest<boolean>('rpc/sre_consume_rate_limit', '', {
+    method: 'POST',
+    body: JSON.stringify({ p_bucket_hash: bucketHash, p_window_start: windowStart, p_maximum: maximum }),
+  });
+  return data === true;
+}
