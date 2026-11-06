@@ -27,7 +27,7 @@ describe('experiment provenance manifests', () => {
   });
 
   test('detects any post-creation experiment modification', async () => {
-    const manifest = createExperimentManifest(input);
+    const manifest = await createExperimentManifest(input);
     const altered = { ...manifest, seed: 43 };
     expect(await verifyExperimentManifest(altered)).toBe(false);
   });
