@@ -2,9 +2,10 @@ import { writeFile } from 'node:fs/promises';
 import { runBatchExperiments } from '../research/batch-runner';
 import type { WorldPresetId } from '../src/types/simulation';
 
+const args = process.argv.slice(2);
 function argument(name: string, fallback: string): string {
-  const index = Bun.argv.indexOf(name);
-  return index >= 0 ? Bun.argv[index + 1] || fallback : fallback;
+  const index = args.indexOf(name);
+  return index >= 0 ? args[index + 1] || fallback : fallback;
 }
 
 const preset = argument('--preset', 'civilization') as WorldPresetId;
