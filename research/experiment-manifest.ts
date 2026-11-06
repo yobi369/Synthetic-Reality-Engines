@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto';
-
 export interface ManifestIntervention {
   readonly id: string;
   readonly tick: number;
@@ -44,11 +42,13 @@ export function canonicalManifestJson(value: unknown): string {
   return JSON.stringify(stableValue(value));
 }
 
-function digestManifest(payload: Omit<ExperimentManifest, 'digest'>): string {
-  return createHash('sha256').update(canonicalManifestJson(payload)).digest('hex');
+async function digestManifest(payload: Omit<ExperimentManifest, 'digest'>): Promise<string> {
+  const bytes = new TextEncoder().encode(canonicalManifestJson(payload));
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-export function createExperimentManifest(input: ExperimentManifestInput): ExperimentManifest {
+export async function createExperimentManifest(input: ExperimentManifestInput): Promise<ExperimentManifest> {
   if (!/^[a-zA-Z0-9_-]{1,100}$/.test(input.experimentId)) throw new Error('Invalid experiment ID.');
   if (!/^[a-f0-9]{7,64}$/i.test(input.sourceRevision)) throw new Error('Source revision must be a Git commit SHA.');
   if (!input.engineVersion.trim() || input.engineVersion.length > 80) throw new Error('Invalid engine version.');
@@ -81,11 +81,11 @@ export function createExperimentManifest(input: ExperimentManifestInput): Experi
     analysisVersion: input.analysisVersion,
     runtime: { ...input.runtime },
   };
-  return { ...payload, digest: digestManifest(payload) };
+  return { ...payload, digest: await digestManifest(payload) };
 }
 
-export function verifyExperimentManifest(manifest: ExperimentManifest): boolean {
+export async function verifyExperimentManifest(manifest: ExperimentManifest): Promise<boolean> {
   if (!manifest || manifest.schemaVersion !== 1 || !/^[a-f0-9]{64}$/.test(manifest.digest)) return false;
   const { digest, ...payload } = manifest;
-  try { return digestManifest(payload) === digest; } catch { return false; }
+  try { return await digestManifest(payload) === digest; } catch { return false; }
 }
