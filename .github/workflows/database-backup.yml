@@ -50,6 +50,11 @@ jobs:
           SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
           BACKUP_DIR: ${{ runner.temp }}/sre-backups
         run: bash scripts/backup-postgres.sh
+      - name: Prune expired rate-limit buckets
+        if: steps.config.outputs.configured == 'true'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -c "delete from public.sre_rate_limits where window_start < now() - interval '48 hours'"
       - name: Restore backup into disposable PostgreSQL and verify schema
         if: steps.config.outputs.configured == 'true'
         env:
