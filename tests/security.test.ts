@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { applySecurityHeaders, createRateLimiter } from '../server/security';
+import { EventEmitter } from 'node:events';
+import { applySecurityHeaders, createClientDisconnectSignal, createRateLimiter } from '../server/security';
 
 describe('HTTP security helpers', () => {
   test('enforces a fixed window and resets after expiry', () => {
@@ -26,5 +27,20 @@ describe('HTTP security helpers', () => {
     expect(headers.get('X-Frame-Options')).toBe('DENY');
     expect(headers.get('Referrer-Policy')).toBe('strict-origin-when-cross-origin');
     expect(continued).toBe(true);
+  });
+  test('aborts upstream work when the client disconnects', () => {
+    const response = Object.assign(new EventEmitter(), { writableEnded: false });
+    const signal = createClientDisconnectSignal(response, 1_000);
+    response.emit('close');
+    expect(signal.aborted).toBe(true);
+    expect(signal.reason).toBeInstanceOf(DOMException);
+  });
+
+  test('does not abort a normally completed response', () => {
+    const response = Object.assign(new EventEmitter(), { writableEnded: true });
+    const signal = createClientDisconnectSignal(response, 1_000);
+    response.emit('finish');
+    response.emit('close');
+    expect(signal.aborted).toBe(false);
   });
 });
