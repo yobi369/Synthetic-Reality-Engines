@@ -104,9 +104,9 @@ See the [LICENSE](LICENSE) file for the complete terms. Licensing enquiries can 
 
 ## Server-side accounts and runs
 
-The Express server provides `/api/auth/register`, `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`, and authenticated `/api/runs` endpoints. Run records and intervention events are scoped to the authenticated account. Use a reverse proxy with HTTPS in production. The current in-process rate limiter is bounded but not shared between instances; do not horizontally scale this adapter. The JSON store supports in-code migrations from schema versions 1 and 2 to version 3 and writes through a temporary file followed by atomic rename. Account-backed run saves verify optional experiment-manifest digests before persisting them.
+The Express server provides `/api/auth/register`, `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`, and authenticated `/api/runs` endpoints. Run records and intervention events are scoped to the authenticated account. Use a reverse proxy with HTTPS in production. When PostgreSQL is configured, API rate limits use atomic database counters shared across server instances. The local JSON fallback retains a bounded per-process limiter. The JSON store supports in-code migrations from schema versions 1 and 2 to version 3 and writes through a temporary file followed by atomic rename. Account-backed run saves verify optional experiment-manifest digests before persisting them.
 
-**Deployment requirement:** configure `DATA_DIR` on a persistent disk/volume. Ephemeral container filesystems are not durable. The current adapter is intended for a single server instance; use a managed relational database and shared session infrastructure before horizontal scaling or multi-instance deployment.
+**JSON-mode deployment requirement:** configure `DATA_DIR` on a persistent disk/volume. Ephemeral container filesystems are not durable. JSON mode is single-instance only; use the dedicated PostgreSQL backend before horizontal scaling or multi-instance deployment.
 
 
 ## Storage backends
@@ -118,6 +118,16 @@ The server supports two storage backends:
 
 The service-role key is a server secret. Never put it in a `VITE_*` variable, frontend bundle, checked-in `.env` file, or browser request. The browser continues to call this application's authenticated API; it does not connect directly to Supabase.
 
-The schema is versioned in `supabase/migrations/`. The initial migration creates account, hashed-session, run-snapshot, and intervention tables; enforces ownership through composite keys and foreign keys; and enables Row Level Security while granting data access only to the server's `service_role`. Run migrations only against the dedicated **Synthetic-Reality-Engines-DB** project, not another project in the organization.
+The schema is versioned in `supabase/migrations/`. The initial migration creates account, hashed-session, run-snapshot, and intervention tables; enforces ownership through composite keys and foreign keys; and enables Row Level Security while granting data access only to the server's `service_role`. The second migration adds atomic shared fixed-window rate-limit counters behind a restricted PostgreSQL function. Run migrations only against the dedicated **Synthetic-Reality-Engines-DB** project, not another project in the organization.
 
 For Supabase application traffic, this integration uses the HTTPS Data API and server-only service-role authentication. The existing JSON backend remains available for isolated local tests and development. Existing JSON files are not automatically copied into PostgreSQL; use a separately reviewed, verified migration/export process before moving any production user data.
+
+
+## Backups, restore drills and hosted acceptance
+
+- `.github/workflows/database-backup.yml` runs daily and on demand. It creates a custom-format backup of the dedicated project's `public` schema, verifies the dump, restores it into a disposable PostgreSQL 17 service, and checks the restored application tables and rate-limit function.
+- To enable scheduled backups, add the repository secret `SUPABASE_DB_URL` using the dedicated project's database connection string and repository variable `SUPABASE_PROJECT_REF=agnphzqyrjihrpaewwaa`. The workflow retains verified backup artifacts for 30 days.
+- `scripts/restore-postgres.sh` is a deliberately guarded manual restore utility. It requires both the project ref and an explicit matching restore confirmation, and replaces objects in the dedicated project's `public` schema. Verify a backup and use the hosted acceptance workflow after a real restore.
+- `.github/workflows/hosted-acceptance.yml` can be run manually after the application is deployed with PostgreSQL enabled. Configure `SRE_ACCEPTANCE_BASE_URL`, `SRE_ACCEPTANCE_EMAIL`, and `SRE_ACCEPTANCE_PASSWORD` as repository secrets. Optional second-account secrets enable a cross-account isolation check.
+
+These workflows do not change any deployment or external service by themselves. They remain safely skipped until their dedicated repository secrets and variable are configured.
