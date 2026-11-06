@@ -136,6 +136,7 @@ Return JSON with format:
       ...parsed
     });
   } catch (error: any) {
+    if (res.destroyed) return;
     console.error('Error in /api/chronicler:', error);
     res.status(502).json({ success: false, error: 'AI narration provider request failed.' });
   }
@@ -185,6 +186,7 @@ Return JSON:
     }
     res.json({ success: true, thought: parsed.thought, motive: parsed.motive });
   } catch (err) {
+    if (res.destroyed) return;
     console.error('Error in /api/agent-thought:', err);
     res.status(502).json({ success: false, error: 'AI agent narration provider request failed.' });
   }
