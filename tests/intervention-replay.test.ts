@@ -24,6 +24,9 @@ describe('deterministic intervention replay', () => {
     expect(() => replayInterventionHistory({
       preset: 'civilization', seed: 123, events: [event(0, 'agent.spawn', { agentId: 'agent_1' })], targetTick: 5,
     })).toThrow(/not replay-safe/);
+    expect(() => replayInterventionHistory({
+      preset: 'civilization', seed: 123, events: [event(0, 'agent.directive', { agentId: 'agent_1', directive: 'think' })], targetTick: 5,
+    })).toThrow(/not replay-safe/);
   });
 
   test('compares two futures from the same fork snapshot', () => {
