@@ -107,3 +107,17 @@ See the [LICENSE](LICENSE) file for the complete terms. Licensing enquiries can 
 The Express server provides `/api/auth/register`, `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`, and authenticated `/api/runs` endpoints. Run records and intervention events are scoped to the authenticated account. Use a reverse proxy with HTTPS in production. The current in-process rate limiter is bounded but not shared between instances; do not horizontally scale this adapter. The JSON store supports in-code migrations from schema versions 1 and 2 to version 3 and writes through a temporary file followed by atomic rename. Account-backed run saves verify optional experiment-manifest digests before persisting them.
 
 **Deployment requirement:** configure `DATA_DIR` on a persistent disk/volume. Ephemeral container filesystems are not durable. The current adapter is intended for a single server instance; use a managed relational database and shared session infrastructure before horizontal scaling or multi-instance deployment.
+
+
+## Storage backends
+
+The server supports two storage backends:
+
+- **Local development:** when both `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are unset, the existing versioned JSON store remains active. Set `DATA_DIR` to choose its directory.
+- **Shared PostgreSQL:** set both `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` on the server process to use the dedicated Supabase PostgreSQL database. Supplying only one variable is a startup configuration error; the application will not silently fall back to JSON when a partial database configuration is present.
+
+The service-role key is a server secret. Never put it in a `VITE_*` variable, frontend bundle, checked-in `.env` file, or browser request. The browser continues to call this application's authenticated API; it does not connect directly to Supabase.
+
+The schema is versioned in `supabase/migrations/`. The initial migration creates account, hashed-session, run-snapshot, and intervention tables; enforces ownership through composite keys and foreign keys; and enables Row Level Security while granting data access only to the server's `service_role`. Run migrations only against the dedicated **Synthetic-Reality-Engines-DB** project, not another project in the organization.
+
+For Supabase application traffic, this integration uses the HTTPS Data API and server-only service-role authentication. The existing JSON backend remains available for isolated local tests and development. Existing JSON files are not automatically copied into PostgreSQL; use a separately reviewed, verified migration/export process before moving any production user data.
