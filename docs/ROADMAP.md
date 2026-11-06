@@ -9,6 +9,9 @@ This roadmap distinguishes verified implementation work from remaining operation
 - [x] Initial simulation construction/reset invariant tests.
 - [ ] Establish a supported Node/Bun version matrix and lockfile policy.
 - [ ] Add dependency and secret scanning.
+- [x] Add baseline browser security headers, disable Express fingerprinting, cap JSON request bodies and bound in-process rate-limit memory.
+- [x] Remove fabricated AI narration fallbacks; validate bounded AI request payloads and provider response schemas.
+- [ ] Add provider deadlines/cancellation and shared rate limiting before public multi-instance exposure.
 
 ## Stage 2 — Trustworthy simulation core
 
@@ -25,7 +28,8 @@ This roadmap distinguishes verified implementation work from remaining operation
 - [x] Capture architect interventions in an append-only run ledger.
 - [x] Document experiment provenance and a reference-dataset validation protocol.
 - [x] Add repeatable multi-preset, multi-seed performance benchmark runner.
-- [ ] Add full run manifests including immutable source revision and complete execution environment.
+- [x] Add a versioned, SHA-256 content-addressed experiment-manifest utility with source revision, configuration, seed, ordered interventions, operation sequence and runtime metadata.
+- [ ] Integrate experiment manifests into the run export/import and account-backed save workflows.
 - [ ] Add batch runs, sensitivity analysis and confidence intervals.
 - [x] Select and pin the LTEE public reference dataset; implement a reproducible, per-population temporal holdout benchmark for published adaptation-curve families.
 - [x] Implement a separate LTEE forward-time subsystem with heritable selection coefficients, beneficial mutation, diminishing-returns effects, daily 1:100 serial transfer and ancestor competition assays.
@@ -55,6 +59,10 @@ This roadmap distinguishes verified implementation work from remaining operation
 - [ ] Add automated backup/restore and hosted persistent-volume restart acceptance tests.
 - [ ] Add structured logs, operational metrics and deployment smoke tests.
 - [ ] Consolidate duplicate development/production AI API handlers and add provider deadlines/cancellation.
+
+### Upgrade branch implementation notes
+
+The `upgrade/research-platform-foundation` branch adds bounded HTTP security helpers, baseline response headers, stricter AI request/response validation, explicit provider-unavailable responses instead of fabricated narration, and a content-addressed experiment manifest utility. The rate limiter remains per-process and the manifest utility is not yet wired into the UI/export workflow; neither is presented as a completed production-scale capability.
 
 ## Scientific claims boundary
 
