@@ -32,3 +32,32 @@ export function applySecurityHeaders(_req: unknown, res: { setHeader(name: strin
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
   next();
 }
+
+
+/**
+ * Abort an upstream request when the client disconnects, while retaining a hard
+ * deadline. A normally completed response must not cancel its own request.
+ */
+export function createClientDisconnectSignal(
+  response: {
+    once(event: 'close' | 'finish', listener: () => void): unknown;
+    writableEnded: boolean;
+  },
+  timeoutMs = 25_000,
+): AbortSignal {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort(new DOMException('Upstream request timed out.', 'TimeoutError'));
+  }, timeoutMs);
+
+  const cleanup = () => clearTimeout(timeout);
+  response.once('finish', cleanup);
+  response.once('close', () => {
+    cleanup();
+    if (!response.writableEnded) {
+      controller.abort(new DOMException('Client disconnected.', 'AbortError'));
+    }
+  });
+
+  return controller.signal;
+}
