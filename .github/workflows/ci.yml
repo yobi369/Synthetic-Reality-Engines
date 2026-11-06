@@ -40,6 +40,15 @@ jobs:
           path: /tmp/sre-batch-report.json
           if-no-files-found: error
           retention-days: 90
+      - name: Parameter-grid sensitivity acceptance
+        run: bun run research:sensitivity -- --preset civilization --parameter resourceRegenMultiplier --values 0.5,1,1.5 --seeds 11,22,33 --ticks 10 --output /tmp/sre-sensitivity-report.json
+      - name: Upload sensitivity report
+        uses: actions/upload-artifact@v4
+        with:
+          name: sre-sensitivity-report
+          path: /tmp/sre-sensitivity-report.json
+          if-no-files-found: error
+          retention-days: 90
       - name: Empirical LTEE benchmark
         run: bun run research:ltee
       - name: LTEE mechanistic calibration and holdout validation
