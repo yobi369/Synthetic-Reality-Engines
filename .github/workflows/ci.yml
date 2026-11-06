@@ -18,6 +18,20 @@ jobs:
     name: Typecheck, tests and build
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sre_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sre_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,6 +47,28 @@ jobs:
         run: bun run test
       - name: Validate database operations scripts
         run: bash -n scripts/backup-postgres.sh scripts/restore-postgres.sh
+      - name: Apply PostgreSQL migrations and verify atomic shared rate limiting
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sre_ci
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          DO $
+          BEGIN
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN CREATE ROLE anon NOLOGIN; END IF;
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN CREATE ROLE authenticated NOLOGIN; END IF;
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'service_role') THEN CREATE ROLE service_role NOLOGIN BYPASSRLS; END IF;
+          END $;
+          SQL
+          psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261106000000_create_sre_transactional_storage.sql
+          psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20261106010000_add_distributed_rate_limiting.sql
+          bucket="$(printf '%064d' 1 | tr '0' 'a')"
+          window_start="$(date -u +%Y-%m-%dT%H:%M:00Z)"
+          first="$(psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -Atc "select public.sre_consume_rate_limit('$bucket', '$window_start', 2)")"
+          second="$(psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -Atc "select public.sre_consume_rate_limit('$bucket', '$window_start', 2)")"
+          third="$(psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -Atc "select public.sre_consume_rate_limit('$bucket', '$window_start', 2)")"
+          test "$first" = "t" && test "$second" = "t" && test "$third" = "f"
+          echo "PostgreSQL migrations and atomic rate-limit acceptance passed."
       - name: Multi-seed simulation batch acceptance
         run: bun run research:batch -- --preset civilization --seeds 11,22,33 --ticks 100 --output /tmp/sre-batch-report.json
       - name: Upload multi-seed batch report
