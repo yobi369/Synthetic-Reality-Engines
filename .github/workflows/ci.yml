@@ -31,6 +31,8 @@ jobs:
         run: bun run lint
       - name: Test
         run: bun run test
+      - name: Validate database operations scripts
+        run: bash -n scripts/backup-postgres.sh scripts/restore-postgres.sh
       - name: Multi-seed simulation batch acceptance
         run: bun run research:batch -- --preset civilization --seeds 11,22,33 --ticks 100 --output /tmp/sre-batch-report.json
       - name: Upload multi-seed batch report
