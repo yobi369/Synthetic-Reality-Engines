@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { randomBytes } from 'node:crypto';
-import { applySecurityHeaders, createRateLimiter } from './server/security';
+import { applySecurityHeaders, createClientDisconnectSignal, createRateLimiter } from './server/security';
 import { validateAgentThoughtInput, validateChroniclerInput } from './server/ai-validation';
 import { verifyExperimentManifest } from './research/experiment-manifest';
 import { appendIntervention, authenticateUser, createSession, deleteRun, findSession, getRun, listInterventions, listRuns, registerUser, revokeSession, saveRun, storageHealth } from './server/storage';
@@ -115,7 +115,7 @@ Return JSON with format:
       config: {
         responseMimeType: 'application/json',
         httpOptions: { timeout: 20_000, retryOptions: { attempts: 1 } },
-        abortSignal: AbortSignal.timeout(25_000),
+        abortSignal: createClientDisconnectSignal(res, 25_000),
       }
     });
 
@@ -175,7 +175,7 @@ Return JSON:
       config: {
         responseMimeType: 'application/json',
         httpOptions: { timeout: 20_000, retryOptions: { attempts: 1 } },
-        abortSignal: AbortSignal.timeout(25_000),
+        abortSignal: createClientDisconnectSignal(res, 25_000),
       }
     });
 
