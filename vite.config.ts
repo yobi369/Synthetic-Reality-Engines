@@ -83,6 +83,8 @@ Return JSON with format:
               contents: prompt,
               config: {
                 responseMimeType: 'application/json',
+                httpOptions: { timeout: 20_000, retryOptions: { attempts: 1 } },
+                abortSignal: AbortSignal.timeout(25_000),
               }
             });
 
@@ -128,7 +130,7 @@ Return JSON:
             const aiRes = await ai.models.generateContent({
               model: 'gemini-2.5-flash',
               contents: prompt,
-              config: { responseMimeType: 'application/json' }
+              config: { responseMimeType: 'application/json', httpOptions: { timeout: 20_000, retryOptions: { attempts: 1 } }, abortSignal: AbortSignal.timeout(25_000) }
             });
 
             const parsed = JSON.parse(aiRes.text || '{}');
