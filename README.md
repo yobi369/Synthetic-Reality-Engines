@@ -77,7 +77,7 @@ Never put provider keys in Vite-exposed variables (for example, `VITE_GEMINI_API
 - Live simulation stepping still runs on the main browser thread. The Research Lab batch worker does not move the interactive world loop off-thread.
 - Performance and population limits need formal benchmark coverage before large-scale claims are made.
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/EXTERNAL_SCIENTIFIC_REVIEW.md](docs/EXTERNAL_SCIENTIFIC_REVIEW.md) and [SECURITY.md](SECURITY.md).
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ROADMAP.md](docs/ROADMAP.md), [docs/INTERVENTION_REPLAY.md](docs/INTERVENTION_REPLAY.md), [docs/EXTERNAL_SCIENTIFIC_REVIEW.md](docs/EXTERNAL_SCIENTIFIC_REVIEW.md) and [SECURITY.md](SECURITY.md).
 
 ## Research and responsible use
 
