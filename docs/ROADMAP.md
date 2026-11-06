@@ -8,7 +8,12 @@ This roadmap distinguishes verified implementation work from remaining operation
 - [x] CI typecheck, automated tests and production build.
 - [x] Initial simulation construction/reset invariant tests.
 - [ ] Establish a supported Node/Bun version matrix and lockfile policy.
-- [ ] Add dependency and secret scanning.
+- [x] Configure Dependabot version updates for Bun dependencies and GitHub Actions.
+- [ ] Add automated secret scanning and dependency vulnerability alert verification.
+- [x] Add baseline browser security headers, disable Express fingerprinting, cap JSON request bodies and bound in-process rate-limit memory.
+- [x] Remove fabricated AI narration fallbacks; validate bounded AI request payloads and provider response schemas.
+- [x] Add bounded Gemini request deadlines and disable automatic retries for interactive AI requests.
+- [ ] Propagate client disconnect cancellation and add shared rate limiting before public multi-instance exposure.
 
 ## Stage 2 — Trustworthy simulation core
 
@@ -25,8 +30,12 @@ This roadmap distinguishes verified implementation work from remaining operation
 - [x] Capture architect interventions in an append-only run ledger.
 - [x] Document experiment provenance and a reference-dataset validation protocol.
 - [x] Add repeatable multi-preset, multi-seed performance benchmark runner.
-- [ ] Add full run manifests including immutable source revision and complete execution environment.
-- [ ] Add batch runs, sensitivity analysis and confidence intervals.
+- [x] Add a versioned, SHA-256 content-addressed experiment-manifest utility with source revision, configuration, seed, ordered interventions, operation sequence and runtime metadata.
+- [x] Attach experiment manifests to browser JSON run exports and verify their digest during import when present.
+- [x] Persist and verify manifests in account-backed saves; migrate v1 and v2 JSON stores to schema v3 without dropping existing runs or intervention ledgers.
+- [ ] Add cross-version manifest format compatibility tests and end-to-end hosted backup/restore acceptance.
+- [x] Add a deterministic multi-seed batch runner with repeat-run metrics, sample standard deviation and 95% confidence intervals.
+- [ ] Add parameter-grid sensitivity analysis and bootstrap confidence intervals.
 - [x] Select and pin the LTEE public reference dataset; implement a reproducible, per-population temporal holdout benchmark for published adaptation-curve families.
 - [x] Implement a separate LTEE forward-time subsystem with heritable selection coefficients, beneficial mutation, diminishing-returns effects, daily 1:100 serial transfer and ancestor competition assays.
 - [x] Calibrate on six complete non-mutator populations and evaluate a pre-held temporal test split; compare five fitness encodings and profile parameter sensitivity.
@@ -40,7 +49,8 @@ This roadmap distinguishes verified implementation work from remaining operation
 - [ ] Establish baselines across controlled population sizes and runtime environments.
 - [ ] Profile perception, interaction resolution, history retention and canvas rendering.
 - [ ] Bound or sample long-lived logs, histories and agent memories.
-- [ ] Consider worker-based stepping and render decoupling.
+- [x] Execute batch experiments in a dedicated Web Worker to keep the interactive UI responsive.
+- [ ] Move the primary live simulation stepping loop to workers and decouple rendering.
 - [ ] Define explicit limits and graceful degradation for large worlds.
 
 ## Stage 5 — Hosted operations and security
@@ -49,12 +59,16 @@ This roadmap distinguishes verified implementation work from remaining operation
 - [x] Expiring, revocable bearer sessions; session tokens are stored as hashes.
 - [x] Owner-scoped run create/list/read/delete endpoints and React account UI.
 - [x] Append-only intervention ingestion/retrieval with idempotent event IDs.
-- [x] Versioned single-instance JSON persistence with atomic replacement and v1-to-v2 migration.
+- [x] Versioned single-instance JSON persistence with atomic replacement and v1/v2-to-v3 migration.
 - [x] API input bounds, payload limits, registration/login rate limits and storage readiness check.
 - [ ] Replace the single-instance JSON store and in-process rate limiter with a transactional shared database before multi-instance scaling.
 - [ ] Add automated backup/restore and hosted persistent-volume restart acceptance tests.
 - [ ] Add structured logs, operational metrics and deployment smoke tests.
 - [ ] Consolidate duplicate development/production AI API handlers and add provider deadlines/cancellation.
+
+### Upgrade branch implementation notes
+
+The `upgrade/research-platform-foundation` branch adds bounded HTTP security helpers, baseline response headers, stricter AI request/response validation, explicit provider-unavailable responses instead of fabricated narration, and a content-addressed experiment manifest utility integrated into browser JSON run export/import. The rate limiter remains per-process, and account-backed saves do not yet persist the manifest; neither is presented as a completed production-scale capability.
 
 ## Scientific claims boundary
 

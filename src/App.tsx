@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { SimulationEngine } from './engine/SimulationEngine';
+import { createExperimentManifest, verifyExperimentManifest } from '../research/experiment-manifest';
+
+declare const __SRE_SOURCE_REVISION__: string;
 import {
   WorldPresetId,
   WorldConfig,
@@ -15,6 +18,7 @@ import { SimulationCanvas } from './components/SimulationCanvas';
 import { AgentInspector } from './components/AgentInspector';
 import { ObservabilityDashboard } from './components/ObservabilityDashboard';
 import { ArchitectureLab } from './components/ArchitectureLab';
+import { ResearchLab } from './components/ResearchLab';
 import { MultiverseLoom } from './components/MultiverseLoom';
 import { PhylogeneticTree } from './components/PhylogeneticTree';
 import { GovernanceCodex } from './components/GovernanceCodex';
@@ -174,7 +178,7 @@ export default function App() {
     syncStateFromEngine();
   };
 
-  const handleExportRun = () => {
+  const handleExportRun = async () => {
     const engine = engineRef.current;
     const run = {
       format: "synthetic-reality-run",
@@ -188,7 +192,20 @@ export default function App() {
       config: engine.config,
       snapshot: engine.createFullSnapshot(),
       logs: engine.logs,
-      interventions: engine.interventions
+      interventions: engine.interventions,
+      manifest: /^[a-f0-9]{7,64}$/i.test(__SRE_SOURCE_REVISION__) ? await createExperimentManifest({
+        experimentId: runIdRef.current,
+        sourceRevision: __SRE_SOURCE_REVISION__,
+        engineVersion: '0.1.0',
+        preset: currentPreset,
+        configuration: engine.config as unknown as Record<string, unknown>,
+        seed: engine.seed,
+        interventions: engine.interventions,
+        tickHorizon: engine.tick,
+        operationSequence: engine.interventions.map(event => `${event.tick}:${event.action}:${event.id}`),
+        analysisVersion: '1',
+        runtime: { name: 'browser', version: navigator.userAgent.slice(0, 100) || 'unknown', platform: navigator.platform || 'unknown', architecture: 'unknown' },
+      }) : null
     };
     const blob = new Blob([JSON.stringify(run, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -208,6 +225,9 @@ export default function App() {
       if (run?.format !== 'synthetic-reality-run' || run?.formatVersion !== 1 ||
           typeof run.preset !== 'string' || !run.snapshot) {
         throw new Error('Unsupported run file. Expected Synthetic Reality Run version 1.');
+      }
+      if (run.manifest && !await verifyExperimentManifest(run.manifest)) {
+        throw new Error('Experiment manifest integrity check failed. This run file may have been modified.');
       }
       const nextEngine = new SimulationEngine(run.preset as WorldPresetId, run.seed);
       nextEngine.restoreRunSnapshot(run.snapshot, run.seed, run.preset as WorldPresetId);
@@ -644,6 +664,9 @@ export default function App() {
             tick={tick}
           />
         )}
+
+        {/* VIEW 7: Repeatable multi-seed experiment workspace */}
+        {activeView === 'research' && <ResearchLab />}
 
         {/* VIEW 6: Engine Architecture Lab */}
         {activeView === 'architecture' && (

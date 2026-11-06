@@ -4,6 +4,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { randomBytes } from 'node:crypto';
+import { applySecurityHeaders, createClientDisconnectSignal, createRateLimiter } from './server/security';
+import { validateAgentThoughtInput, validateChroniclerInput } from './server/ai-validation';
+import { verifyExperimentManifest } from './research/experiment-manifest';
 import { appendIntervention, authenticateUser, createSession, deleteRun, findSession, getRun, listInterventions, listRuns, registerUser, revokeSession, saveRun, storageHealth } from './server/storage';
 
 dotenv.config();
@@ -14,13 +17,10 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 
-app.use(express.json({ limit: '20mb' }));
-const authAttempts = new Map<string, { count: number; resetAt: number }>();
-function rateLimit(key: string, maximum: number): boolean {
-  const now = Date.now(); const entry = authAttempts.get(key);
-  if (!entry || entry.resetAt <= now) { authAttempts.set(key, { count: 1, resetAt: now + 60_000 }); return true; }
-  entry.count += 1; return entry.count <= maximum;
-}
+app.disable('x-powered-by');
+app.use(applySecurityHeaders);
+app.use(express.json({ limit: '10mb', strict: true }));
+const rateLimit = createRateLimiter({ windowMs: 60_000, maxEntries: 10_000 });
 async function requireUser(req: express.Request, res: express.Response, next: express.NextFunction) {
   const header = req.header('authorization') || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
@@ -45,12 +45,12 @@ function getGeminiClient(): GoogleGenAI | null {
 }
 
 app.post('/api/auth/register', async (req, res) => {
-  if (!rateLimit(req.ip || 'unknown', 5)) return res.status(429).json({ error: 'Too many account attempts.' });
+  if (!rateLimit('register:' + (req.ip || 'unknown'), 5)) return res.status(429).json({ error: 'Too many account attempts.' });
   try { const user = await registerUser(String(req.body?.email || ''), String(req.body?.password || '')); const session = await createSession(user.id); res.status(201).json({ user: safeUser(user), ...session }); }
   catch (error: any) { res.status(400).json({ error: error.message || 'Registration failed.' }); }
 });
 app.post('/api/auth/login', async (req, res) => {
-  if (!rateLimit(req.ip || 'unknown', 10)) return res.status(429).json({ error: 'Too many login attempts.' });
+  if (!rateLimit('login:' + (req.ip || 'unknown'), 10)) return res.status(429).json({ error: 'Too many login attempts.' });
   const user = await authenticateUser(String(req.body?.email || ''), String(req.body?.password || ''));
   if (!user) return res.status(401).json({ error: 'Invalid email or password.' });
   res.json({ user: safeUser(user), ...await createSession(user.id) });
@@ -61,7 +61,8 @@ app.get('/api/runs', requireUser, async (req, res) => res.json({ runs: await lis
 app.post('/api/runs', requireUser, async (req, res) => {
   const b = req.body || {};
   if (typeof b.id !== 'string' || b.id.length > 100 || typeof b.name !== 'string' || b.name.length > 120 || typeof b.preset !== 'string' || !Number.isInteger(b.seed) || b.seed < 0 || b.seed > 0xffffffff || !Number.isInteger(b.tick) || b.tick < 0 || !b.snapshot || typeof b.snapshot !== 'object') return res.status(400).json({ error: 'Invalid run payload.' });
-  try { const run = await saveRun((req as any).user.id, { id: b.id, name: b.name, preset: b.preset, seed: b.seed, tick: b.tick, snapshot: b.snapshot }); res.status(201).json({ run: { id: run.id, name: run.name, preset: run.preset, seed: run.seed, tick: run.tick, createdAt: run.createdAt, updatedAt: run.updatedAt } }); }
+  if (b.manifest !== undefined && !await verifyExperimentManifest(b.manifest)) return res.status(400).json({ error: 'Experiment manifest integrity check failed.' });
+  try { const run = await saveRun((req as any).user.id, { id: b.id, name: b.name, preset: b.preset, seed: b.seed, tick: b.tick, snapshot: b.snapshot, manifest: b.manifest }); res.status(201).json({ run: { id: run.id, name: run.name, preset: run.preset, seed: run.seed, tick: run.tick, createdAt: run.createdAt, updatedAt: run.updatedAt } }); }
   catch { res.status(500).json({ error: 'Could not save run.' }); }
 });
 app.get('/api/runs/:id', requireUser, async (req, res) => { const run = await getRun((req as any).user.id, req.params.id); if (!run) return res.status(404).json({ error: 'Run not found.' }); res.json({ run }); });
@@ -82,25 +83,12 @@ app.post('/api/runs/:id/interventions', requireUser, async (req, res) => {
 app.post('/api/chronicler', async (req, res) => {
   if (!rateLimit('chronicler:' + (req.ip || 'unknown'), 20)) return res.status(429).json({ success: false, error: 'Rate limit exceeded.' });
   try {
-    const { worldName, epoch, population, factions, topEvents, economicStats, userPrompt } = req.body;
+    const input = validateChroniclerInput(req.body);
+    if (!input) return res.status(400).json({ success: false, error: 'Invalid or oversized chronicler request.' });
+    const { worldName, epoch, population, factions, topEvents, economicStats, userPrompt } = input;
     const ai = getGeminiClient();
 
-    if (!ai) {
-      // High-quality deterministic fallback lore generator
-      const fallbackThemes = [
-        `Chronicle of Era ${epoch}: The world of ${worldName} experienced significant societal shifts. Factions navigated resource competition as population reached ${population}.`,
-        `Historical Record: Economists recorded trade volume fluctuations, while pioneer agents pushed the boundaries of known territory.`,
-        `The Great Annals: Observers noted emergent strategic alliances and shifting territory control across the continents.`
-      ];
-      const randomSummary = fallbackThemes[epoch % fallbackThemes.length];
-      return res.json({
-        success: true,
-        source: 'local_engine',
-        title: `Annals of ${worldName} — Epoch ${epoch}`,
-        chronicle: `${randomSummary}\n\nKey Recorded Developments:\n${(topEvents || []).slice(0, 4).map((e: string, i: number) => `• [Year ${epoch}.${i + 1}] ${e}`).join('\n') || '• Continuous steady state operations across all biomes.'}\n\nPhilosophical Note: "In simple rules lie infinite tapestries."`,
-        recommendation: 'Analyze faction wealth disparity and adjust environmental regeneration rate.'
-      });
-    }
+    if (!ai) return res.status(503).json({ success: false, error: 'AI narration is unavailable: GEMINI_API_KEY is not configured.' });
 
     const prompt = `You are the Grand Cosmic Chronicler of a Synthetic Reality Engine named "${worldName}".
 Context of the simulation:
@@ -126,6 +114,8 @@ Return JSON with format:
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
+        httpOptions: { timeout: 20_000, retryOptions: { attempts: 1 } },
+        abortSignal: createClientDisconnectSignal(res, 25_000),
       }
     });
 
@@ -134,11 +124,10 @@ Return JSON with format:
     try {
       parsed = JSON.parse(text || '{}');
     } catch {
-      parsed = {
-        title: `Chronicles of ${worldName} (Epoch ${epoch})`,
-        chronicle: text || 'The simulation continues to evolve.',
-        recommendation: 'Observe agent survival behaviors.'
-      };
+      return res.status(502).json({ success: false, error: 'AI narration provider returned invalid structured output.' });
+    }
+    if (!parsed || typeof parsed !== 'object' || typeof parsed.title !== 'string' || parsed.title.length > 160 || typeof parsed.chronicle !== 'string' || parsed.chronicle.length > 8_000 || typeof parsed.recommendation !== 'string' || parsed.recommendation.length > 1_000) {
+      return res.status(502).json({ success: false, error: 'AI narration provider returned an invalid response shape.' });
     }
 
     res.json({
@@ -147,11 +136,9 @@ Return JSON with format:
       ...parsed
     });
   } catch (error: any) {
+    if (res.destroyed) return;
     console.error('Error in /api/chronicler:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to generate chronicle'
-    });
+    res.status(502).json({ success: false, error: 'AI narration provider request failed.' });
   }
 });
 
@@ -159,23 +146,12 @@ Return JSON with format:
 app.post('/api/agent-thought', async (req, res) => {
   if (!rateLimit('agent-thought:' + (req.ip || 'unknown'), 40)) return res.status(429).json({ success: false, error: 'Rate limit exceeded.' });
   try {
-    const { agent, surroundings, recentMemory } = req.body;
+    const input = validateAgentThoughtInput(req.body);
+    if (!input) return res.status(400).json({ success: false, error: 'Invalid or oversized agent-thought request.' });
+    const { agent, surroundings, recentMemory } = input;
     const ai = getGeminiClient();
 
-    if (!ai) {
-      const fallbackMonologues = [
-        `"I must secure more resources before nightfall. My energy is at ${Math.round(agent?.energy || 50)}%."`,
-        `"Trade prices are fluctuating. If I reach the market post soon, I can maximize my profit."`,
-        `"The surrounding biome looks volatile. I should stick close to my faction allies."`,
-        `"Curious anomaly detected nearby. Perhaps knowledge lies waiting to be uncovered."`
-      ];
-      const thought = fallbackMonologues[Math.floor(Math.random() * fallbackMonologues.length)];
-      return res.json({
-        success: true,
-        thought,
-        motive: agent?.goal || 'Survival & Prosperity'
-      });
-    }
+    if (!ai) return res.status(503).json({ success: false, error: 'AI agent narration is unavailable: GEMINI_API_KEY is not configured.' });
 
     const prompt = `You are the inner consciousness of an autonomous agent inside a Synthetic Reality Engine.
 Agent Profile:
@@ -199,16 +175,20 @@ Return JSON:
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
+        httpOptions: { timeout: 20_000, retryOptions: { attempts: 1 } },
+        abortSignal: createClientDisconnectSignal(res, 25_000),
       }
     });
 
     const parsed = JSON.parse(response.text || '{}');
-    res.json({
-      success: true,
-      ...parsed
-    });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+    if (!parsed || typeof parsed !== 'object' || typeof parsed.thought !== 'string' || parsed.thought.length > 1_000 || typeof parsed.motive !== 'string' || parsed.motive.length > 120) {
+      return res.status(502).json({ success: false, error: 'AI agent narration provider returned an invalid response shape.' });
+    }
+    res.json({ success: true, thought: parsed.thought, motive: parsed.motive });
+  } catch (err) {
+    if (res.destroyed) return;
+    console.error('Error in /api/agent-thought:', err);
+    res.status(502).json({ success: false, error: 'AI agent narration provider request failed.' });
   }
 });
 

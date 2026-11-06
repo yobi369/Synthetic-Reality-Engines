@@ -40,13 +40,29 @@ describe('server-side identity and private run storage', () => {
     expect(await storage.listInterventions(alice.id, 'run-a')).toHaveLength(1);
   });
 
-  test('migrates version-one stores to version two without losing existing records', async () => {
+  test('migrates version-one stores to version three without losing existing records', async () => {
     const legacy = { schemaVersion: 1, users: [], sessions: [], runs: [] };
     await writeFile(path.join(directory, 'synthetic-reality-store.json'), JSON.stringify(legacy));
     const health = await storage.storageHealth();
-    expect(health.schemaVersion).toBe(2);
+    expect(health.schemaVersion).toBe(3);
     const migrated = JSON.parse(await readFile(path.join(directory, 'synthetic-reality-store.json'), 'utf8'));
     expect(migrated.interventions).toEqual([]);
+  });
+
+  test('migrates version-two stores to version three while retaining intervention records', async () => {
+    const legacy = { schemaVersion: 2, users: [], sessions: [], runs: [], interventions: [{ id: 'legacy-event' }] };
+    await writeFile(path.join(directory, 'synthetic-reality-store.json'), JSON.stringify(legacy));
+    const health = await storage.storageHealth();
+    expect(health.schemaVersion).toBe(3);
+    const migrated = JSON.parse(await readFile(path.join(directory, 'synthetic-reality-store.json'), 'utf8'));
+    expect(migrated.interventions).toEqual([{ id: 'legacy-event' }]);
+  });
+
+  test('persists optional experiment manifests with saved runs', async () => {
+    const user = await storage.registerUser('manifest@example.org', 'manifest-test-password-123');
+    const manifest = { schemaVersion: 1, digest: 'a'.repeat(64) };
+    await storage.saveRun(user.id, { id: 'manifest-run', name: 'Manifest run', preset: 'civilization', seed: 12, tick: 5, snapshot: { tick: 5 }, manifest });
+    expect((await storage.getRun(user.id, 'manifest-run'))?.manifest).toEqual(manifest);
   });
 
   test('rejects duplicate accounts and weak passwords', async () => {

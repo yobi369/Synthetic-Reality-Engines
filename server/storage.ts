@@ -4,14 +4,14 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const scrypt = promisify(scryptCallback);
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 
 export interface UserRecord { id: string; email: string; passwordSalt: string; passwordHash: string; createdAt: string }
 export interface SessionRecord { tokenHash: string; userId: string; expiresAt: number }
 export interface RunRecord {
   id: string; ownerId: string; name: string; preset: string; seed: number; tick: number;
-  snapshot: unknown; createdAt: string; updatedAt: string;
+  snapshot: unknown; manifest?: unknown; createdAt: string; updatedAt: string;
 }
 export interface InterventionRecord {
   id: string; runId: string; ownerId: string; tick: number; epoch: number;
@@ -19,7 +19,8 @@ export interface InterventionRecord {
 }
 interface StoreV1 { schemaVersion: 1; users: UserRecord[]; sessions: SessionRecord[]; runs: RunRecord[] }
 interface StoreV2 { schemaVersion: 2; users: UserRecord[]; sessions: SessionRecord[]; runs: RunRecord[]; interventions: InterventionRecord[] }
-type Store = StoreV2;
+interface StoreV3 { schemaVersion: 3; users: UserRecord[]; sessions: SessionRecord[]; runs: RunRecord[]; interventions: InterventionRecord[] }
+type Store = StoreV3;
 
 const dataDirectory = path.resolve(process.env.DATA_DIR || './data');
 const storePath = path.join(dataDirectory, 'synthetic-reality-store.json');
@@ -30,7 +31,12 @@ function emptyStore(): Store { return { schemaVersion: SCHEMA_VERSION, users: []
 async function migrate(raw: any): Promise<Store> {
   if (!raw || typeof raw !== 'object') return emptyStore();
   if (raw.schemaVersion === 1) {
-    const migrated: Store = { schemaVersion: 2, users: raw.users || [], sessions: raw.sessions || [], runs: raw.runs || [], interventions: [] };
+    const migrated: Store = { schemaVersion: 3, users: raw.users || [], sessions: raw.sessions || [], runs: raw.runs || [], interventions: [] };
+    await persist(migrated);
+    return migrated;
+  }
+  if (raw.schemaVersion === 2) {
+    const migrated: Store = { schemaVersion: 3, users: raw.users || [], sessions: raw.sessions || [], runs: raw.runs || [], interventions: raw.interventions || [] };
     await persist(migrated);
     return migrated;
   }
@@ -117,9 +123,9 @@ export async function saveRun(ownerId: string, input: Omit<RunRecord, 'ownerId' 
     return run;
   });
 }
-export async function listRuns(ownerId: string): Promise<Omit<RunRecord, 'snapshot'>[]> {
+export async function listRuns(ownerId: string): Promise<Omit<RunRecord, 'snapshot' | 'manifest'>[]> {
   const store = await readStore();
-  return store.runs.filter(run => run.ownerId === ownerId).map(({ snapshot, ...metadata }) => metadata);
+  return store.runs.filter(run => run.ownerId === ownerId).map(({ snapshot, manifest, ...metadata }) => metadata);
 }
 export async function getRun(ownerId: string, runId: string): Promise<RunRecord | null> {
   const store = await readStore();

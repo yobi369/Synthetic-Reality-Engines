@@ -32,7 +32,10 @@ Please report suspected vulnerabilities privately to the repository owner rather
 - Passwords are stored as scrypt-derived hashes with per-account random salts; plaintext passwords are not persisted.
 - Session bearer tokens are random and only SHA-256 token hashes are stored. Sessions expire after seven days and can be revoked.
 - Authenticated run and intervention operations always scope lookups and mutations by the session's account ID.
-- Registration and login endpoints have per-process IP rate limits. Deploy behind HTTPS and a trusted reverse proxy.
+- Registration, login and AI endpoints have bounded per-process IP rate limits. The limiter is not shared across instances and is not a substitute for an edge/WAF control. Deploy behind HTTPS and a trusted reverse proxy.
+- The API applies baseline browser security headers, disables the Express `X-Powered-By` header, and limits JSON request bodies to 10 MB.
+- AI endpoints reject malformed or oversized request context, validate structured provider responses, and return an explicit unavailable response when `GEMINI_API_KEY` is absent; they do not fabricate AI output.
+- Gemini generation requests use a 20-second SDK HTTP timeout, a 25-second abort deadline and one attempt (no automatic retries), preventing unbounded interactive provider waits. Client-disconnect cancellation is not yet wired through.
 - The current file-backed store is for a single server instance. Configure `DATA_DIR` on a persistent, access-restricted volume, limit host filesystem access, and maintain encrypted off-host backups.
 - Do not expose the data directory through static file serving. Do not commit production data or credentials.
 - Before multi-instance deployment, replace the file adapter with a transactional shared database and a distributed session/rate-limit store.

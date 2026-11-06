@@ -16,7 +16,9 @@
     "server:dev": "bun server.ts",
     "benchmark": "bun scripts/benchmark.ts",
     "research:ltee": "bun scripts/empirical-ltee-validation.ts",
-    "research:ltee-mechanistic": "bun scripts/ltee-mechanistic-validation.ts"
+    "research:ltee-mechanistic": "bun scripts/ltee-mechanistic-validation.ts",
+    "research:batch": "bun research/run-batch-experiments.ts",
+    "research:sensitivity": "bun research/run-sensitivity-analysis.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -40,7 +42,6 @@
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
-    "vite": "^6.2.3",
     "@types/express": "^4.17.21"
   }
 }

@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
+import { createExperimentManifest } from '../../research/experiment-manifest';
+
+declare const __SRE_SOURCE_REVISION__: string;
 
 type SavedRun = {
   id: string; name: string; preset: string; seed: number; tick: number;
-  snapshot: unknown; createdAt?: string; updatedAt?: string;
+  snapshot: unknown; manifest?: unknown; createdAt?: string; updatedAt?: string;
 };
 
 type Props = {
@@ -46,8 +49,22 @@ export function AccountPanel({ currentRun, onRestore }: Props) {
   async function saveCurrent() {
     setBusy(true); setMessage('');
     try {
-      await request('/api/runs', { method: 'POST', body: JSON.stringify(currentRun) });
-      const events = ((currentRun.snapshot as any)?.interventions || []) as Array<any>;
+      const snapshot = currentRun.snapshot as any;
+      const events = (snapshot?.interventions || []) as Array<any>;
+      const manifest = /^[a-f0-9]{7,64}$/i.test(__SRE_SOURCE_REVISION__) ? await createExperimentManifest({
+        experimentId: currentRun.id,
+        sourceRevision: __SRE_SOURCE_REVISION__,
+        engineVersion: '0.1.0',
+        preset: currentRun.preset,
+        configuration: snapshot.config as Record<string, unknown>,
+        seed: currentRun.seed,
+        interventions: events,
+        tickHorizon: currentRun.tick,
+        operationSequence: events.map(event => String(event.tick) + ':' + event.action + ':' + event.id),
+        analysisVersion: '1',
+        runtime: { name: 'browser', version: navigator.userAgent.slice(0, 100) || 'unknown', platform: navigator.platform || 'unknown', architecture: 'unknown' },
+      }) : undefined;
+      await request('/api/runs', { method: 'POST', body: JSON.stringify({ ...currentRun, manifest }) });
       for (const event of events) {
         await request('/api/runs/' + encodeURIComponent(currentRun.id) + '/interventions', {
           method: 'POST', body: JSON.stringify({ id: event.id, tick: event.tick, epoch: event.epoch, action: event.action, parameters: event.parameters, recordedAt: event.recordedAt })
