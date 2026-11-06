@@ -21,7 +21,8 @@ import {
   Dna,
   Scale,
   Volume2,
-  VolumeX
+  VolumeX,
+  FlaskConical
 } from 'lucide-react';
 import { WorldPresetId } from '../types/simulation';
 import { WORLD_PRESETS } from '../engine/presets';
@@ -33,7 +34,8 @@ export type AppViewType =
   | 'phylogeny'
   | 'governance'
   | 'observability'
-  | 'architecture';
+  | 'architecture'
+  | 'research';
 
 interface HeaderProps {
   currentPreset: WorldPresetId;
@@ -186,6 +188,19 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <BarChart3 className="w-3.5 h-3.5" />
             <span>Observability</span>
+          </button>
+
+          <button
+            id="view-research-btn"
+            onClick={() => onSelectView('research')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
+              activeView === 'research'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-sm font-semibold'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+            }`}
+          >
+            <FlaskConical className="w-3.5 h-3.5" />
+            <span>Research Lab</span>
           </button>
 
           <button
