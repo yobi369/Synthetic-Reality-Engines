@@ -13,7 +13,9 @@ Synthetic Reality Engines (SRE) is an interactive research prototype for constru
 - **World canvas** — observe the simulation and apply architect-level interventions.
 - **Economy and governance views** — inspect market indicators, factions, laws and historical signals.
 - **Evolution and timelines** — explore clades/speciation and fork or switch simulation timelines.
-- **AI-assisted narration** — optionally request chronicles and agent-thought text through a server-side Gemini integration.
+- **Research Lab** — run independent multi-seed batches in a Web Worker, compare outcome distributions, inspect 95% confidence intervals and export JSON reports.
+- **Experiment provenance** — create SHA-256 content-addressed manifests for browser exports and account-backed saves when the build embeds a Git commit revision.
+- **AI-assisted narration** — optionally request chronicles and agent-thought text through a server-side Gemini integration, with bounded request deadlines and explicit unavailable responses.
 
 The AI endpoints are optional presentation/interpretation features. They are not the simulation authority: world state is owned by the local simulation engine.
 
@@ -47,6 +49,7 @@ The Vite development server is configured for port **3000**. Run `bun run start`
 bun run lint
 bun run test
 bun run build
+bun run research:batch -- --preset civilization --seeds 11,22,33 --ticks 1000 --output batch-report.json
 ```
 
 ## Configuration
@@ -64,7 +67,7 @@ Never put provider keys in Vite-exposed variables (for example, `VITE_GEMINI_API
 ## Product boundaries and current limitations
 
 - The engine now accepts an explicit numeric seed (`new SimulationEngine(preset, seed)`) and uses an internal PRNG for engine randomness. Identical seeds and identical operation sequences reproduce engine trajectories; default construction uses a time-derived seed.
-- Timeline forks remain in-memory. Runs can be exported/imported as versioned JSON. Architect actions are recorded in the run's intervention ledger and included in snapshots.
+- Timeline forks remain in-memory. Runs can be exported/imported as versioned JSON. Architect actions are recorded in the run's intervention ledger and included in snapshots. Browser exports and account-backed saves can include a verifiable provenance manifest; it records declared inputs but does not independently prove that a run was honestly executed.
 - The current model is a 2D agent/world simulation. It has deterministic computational regression tests, but no empirical calibration or demonstrated real-world predictive validity.
 - The interactive `microbial` preset is explicitly **UNVALIDATED** and must not be presented as an LTEE or real microbial prediction model. A separate, narrow LTEE research subsystem exists under `src/research/ltee/` and is documented in `docs/EMPIRICAL_LTEE_VALIDATION.md`.
 - AI-generated chronicles are narrative interpretations, not evidence or ground truth.
@@ -74,7 +77,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/ROADMAP.md](docs/ROADMAP
 
 ## Research and responsible use
 
-For serious experiments, retain the preset, configuration, code revision, seed, intervention sequence, run duration and outputs. The server exposes account registration/login, owner-scoped run storage, and intervention audit endpoints. Passwords are derived with scrypt; bearer sessions are stored as SHA-256 token hashes. The default persistence adapter is an atomic, versioned JSON file store; set `DATA_DIR` to a persistent mounted volume and back it up. This is single-instance storage, not a horizontally scalable database. Use the research validation protocol in [docs/RESEARCH_VALIDATION.md](docs/RESEARCH_VALIDATION.md). Avoid using simulated outcomes as substitutes for empirical evidence or real-world policy decisions.
+For serious experiments, retain the preset, configuration, code revision, seed, intervention sequence, run duration and outputs. The server exposes account registration/login, owner-scoped run storage, and intervention audit endpoints. Passwords are derived with scrypt; bearer sessions are stored as SHA-256 token hashes. The default persistence adapter is an atomic, versioned JSON file store (schema v3, with v1/v2 migration); set `DATA_DIR` to a persistent mounted volume and back it up. Account-backed runs persist optional verified experiment manifests. This is single-instance storage, not a horizontally scalable database. Use the research validation protocol in [docs/RESEARCH_VALIDATION.md](docs/RESEARCH_VALIDATION.md). Avoid using simulated outcomes as substitutes for empirical evidence or real-world policy decisions.
 
 ## Contributing
 
@@ -90,13 +93,13 @@ See the [LICENSE](LICENSE) file for the complete terms. Licensing enquiries can 
 
 ## Run persistence
 
-- Export a run as a versioned JSON snapshot and import it later from the experiment controls.
+- Export a run as a versioned JSON snapshot and import it later from the experiment controls. When the frontend build embeds a valid Git commit SHA, exports include a SHA-256 experiment manifest; import verifies the digest when a manifest is present.
 - The browser periodically autosaves the latest simulation state to local storage and attempts to restore it on the next visit.
 - Snapshot restoration validates core state and restores the PRNG stream so continued simulation can be reproducible.
-- Browser storage is local to the browser profile and may be cleared or quota-limited. Keep exported JSON files as portable backups; this is not cloud or multi-user persistence.
+- Browser autosave remains local to the browser profile and may be cleared or quota-limited. Account-backed saves are available through the server API; retain exported JSON files as portable backups.
 
 ## Server-side accounts and runs
 
-The Express server provides `/api/auth/register`, `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`, and authenticated `/api/runs` endpoints. Run records and intervention events are scoped to the authenticated account. Use a reverse proxy with HTTPS in production. The JSON store supports an in-code schema migration from version 1 to version 2 and writes through a temporary file followed by atomic rename.
+The Express server provides `/api/auth/register`, `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`, and authenticated `/api/runs` endpoints. Run records and intervention events are scoped to the authenticated account. Use a reverse proxy with HTTPS in production. The current in-process rate limiter is bounded but not shared between instances; do not horizontally scale this adapter. The JSON store supports in-code migrations from schema versions 1 and 2 to version 3 and writes through a temporary file followed by atomic rename. Account-backed run saves verify optional experiment-manifest digests before persisting them.
 
 **Deployment requirement:** configure `DATA_DIR` on a persistent disk/volume. Ephemeral container filesystems are not durable. The current adapter is intended for a single server instance; use a managed relational database and shared session infrastructure before horizontal scaling or multi-instance deployment.
