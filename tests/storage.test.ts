@@ -70,4 +70,10 @@ describe('server-side identity and private run storage', () => {
     await expect(storage.registerUser('DUPLICATE@example.org', 'strong-password-123')).rejects.toThrow();
     await expect(storage.registerUser('weak@example.org', 'short')).rejects.toThrow();
   });
+  test('keeps a bounded local rate-limit fallback for isolated development', async () => {
+    expect(await storage.consumeRateLimit('test-local-limit', 2, 60_000)).toBe(true);
+    expect(await storage.consumeRateLimit('test-local-limit', 2, 60_000)).toBe(true);
+    expect(await storage.consumeRateLimit('test-local-limit', 2, 60_000)).toBe(false);
+  });
+
 });
