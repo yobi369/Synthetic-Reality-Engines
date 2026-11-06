@@ -152,6 +152,9 @@ Return JSON:
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss(), sreApiPlugin()],
+    define: {
+      __SRE_SOURCE_REVISION__: JSON.stringify(process.env.VITE_GIT_COMMIT_SHA || process.env.GITHUB_SHA || process.env.VERCEL_GIT_COMMIT_SHA || 'unknown'),
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
