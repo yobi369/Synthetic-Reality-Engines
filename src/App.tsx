@@ -18,6 +18,7 @@ import { SimulationCanvas } from './components/SimulationCanvas';
 import { AgentInspector } from './components/AgentInspector';
 import { ObservabilityDashboard } from './components/ObservabilityDashboard';
 import { ArchitectureLab } from './components/ArchitectureLab';
+import { ResearchLab } from './components/ResearchLab';
 import { MultiverseLoom } from './components/MultiverseLoom';
 import { PhylogeneticTree } from './components/PhylogeneticTree';
 import { GovernanceCodex } from './components/GovernanceCodex';
@@ -663,6 +664,9 @@ export default function App() {
             tick={tick}
           />
         )}
+
+        {/* VIEW 7: Repeatable multi-seed experiment workspace */}
+        {activeView === 'research' && <ResearchLab />}
 
         {/* VIEW 6: Engine Architecture Lab */}
         {activeView === 'architecture' && (
