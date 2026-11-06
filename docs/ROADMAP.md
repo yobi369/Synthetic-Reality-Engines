@@ -8,7 +8,8 @@ This roadmap distinguishes verified implementation work from remaining operation
 - [x] CI typecheck, automated tests and production build.
 - [x] Initial simulation construction/reset invariant tests.
 - [ ] Establish a supported Node/Bun version matrix and lockfile policy.
-- [ ] Add dependency and secret scanning.
+- [x] Configure Dependabot version updates for Bun dependencies and GitHub Actions.
+- [ ] Add automated secret scanning and dependency vulnerability alert verification.
 - [x] Add baseline browser security headers, disable Express fingerprinting, cap JSON request bodies and bound in-process rate-limit memory.
 - [x] Remove fabricated AI narration fallbacks; validate bounded AI request payloads and provider response schemas.
 - [ ] Add provider deadlines/cancellation and shared rate limiting before public multi-instance exposure.
