@@ -75,16 +75,6 @@ function applyIntervention(engine: SimulationEngine, event: InterventionEvent): 
       engine.triggerCosmicTool(tool as Parameters<SimulationEngine['triggerCosmicTool']>[0], numberValue(p.x, 'x'), numberValue(p.y, 'y'));
       return;
     }
-    case 'agent.directive': {
-      const agent = engine.agents.find(item => item.id === stringValue(p.agentId, 'agentId'));
-      if (!agent) throw new Error('Replay directive references an unknown agent.');
-      const directive = stringValue(p.directive, 'directive');
-      agent.currentThought = directive;
-      agent.goal = `Responding to neural directive: "${directive.slice(0, 30)}..."`;
-      agent.thoughtTimer = 200;
-      agent.memory = [...(agent.memory || []).slice(-8), `Direct neural directive: ${directive}`];
-      return;
-    }
     case 'agent.heal': {
       const agent = engine.agents.find(item => item.id === stringValue(p.agentId, 'agentId'));
       if (!agent) throw new Error('Replay heal references an unknown agent.');
@@ -209,5 +199,7 @@ export function compareAlternativeFutures(input: {
     applyIntervention(alternative, event);
   }
   advanceTo(alternative, input.horizonTick);
+  baseline.interventions = [...(forkState.interventions || []), ...baselineEvents];
+  alternative.interventions = [...(forkState.interventions || []), ...alternativeEvents];
   return { forkTick: input.forkTick, horizonTick: input.horizonTick, baseline: summarizeFuture(baseline), alternative: summarizeFuture(alternative) };
 }
