@@ -67,6 +67,7 @@ export default function App() {
     setTick(engine.tick);
     setEpoch(engine.epoch);
     setPopulation(engine.agents.length);
+    if (engine.tick < lastAutosavedTickRef.current) lastAutosavedTickRef.current = 0;
     if (engine.tick >= lastAutosavedTickRef.current + 10) {
       lastAutosavedTickRef.current = engine.tick;
       try {
