@@ -17,7 +17,7 @@ The manifest is serialized using recursively sorted object keys and hashed with 
 
 ## Current integration boundary
 
-This module is a tested foundation, not yet an automatic guarantee for every saved run. The browser run export/import and account-backed storage paths must be connected to manifest creation and verification before the product can claim end-to-end provenance enforcement. A digest proves that a manifest has not changed relative to its digest; it does not prove that the source code, runtime or reported experiment was truthful.
+This module is a tested foundation, not yet an automatic guarantee for every saved run. Browser JSON run exports now attach the manifest when the build embeds a valid Git commit SHA, and imports verify the digest when a manifest is present. Older version-1 files without a manifest remain importable for compatibility. Account-backed saves do not yet persist the manifest, and end-to-end provenance enforcement is not claimed until that path is integrated. A digest proves that a manifest has not changed relative to its digest; it does not prove that the source code, runtime or reported experiment was truthful.
 
 ## Example
 
