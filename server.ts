@@ -112,6 +112,8 @@ Return JSON with format:
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
+        httpOptions: { timeout: 20_000, retryOptions: { attempts: 1 } },
+        abortSignal: AbortSignal.timeout(25_000),
       }
     });
 
