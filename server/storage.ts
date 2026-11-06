@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import type { UserRecord, RunRecord, InterventionRecord } from './storage-json';
 import { createHash } from 'node:crypto';
 
