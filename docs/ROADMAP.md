@@ -46,7 +46,8 @@ This roadmap distinguishes verified implementation work from remaining operation
 - [ ] Establish baselines across controlled population sizes and runtime environments.
 - [ ] Profile perception, interaction resolution, history retention and canvas rendering.
 - [ ] Bound or sample long-lived logs, histories and agent memories.
-- [ ] Consider worker-based stepping and render decoupling.
+- [x] Execute batch experiments in a dedicated Web Worker to keep the interactive UI responsive.
+- [ ] Move the primary live simulation stepping loop to workers and decouple rendering.
 - [ ] Define explicit limits and graceful degradation for large worlds.
 
 ## Stage 5 — Hosted operations and security
