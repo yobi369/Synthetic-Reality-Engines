@@ -14,10 +14,7 @@ export function createRateLimiter(options: RateLimitOptions = {}) {
         for (const [candidate, bucket] of buckets) {
           if (bucket.resetAt <= now) buckets.delete(candidate);
         }
-        if (buckets.size >= maxEntries) {
-          const oldestKey = buckets.keys().next().value;
-          if (oldestKey !== undefined) buckets.delete(oldestKey);
-        }
+        if (buckets.size >= maxEntries) return false;
       }
       entry = { count: 0, resetAt: now + windowMs };
       buckets.set(normalizedKey, entry);
