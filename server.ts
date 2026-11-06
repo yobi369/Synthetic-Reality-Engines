@@ -194,7 +194,7 @@ Return JSON:
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
-  try { await storageHealth(); res.json({ status: 'ok', engine: 'Synthetic Reality Engine', storage: 'ready' }); } catch { res.status(503).json({ status: 'degraded', storage: 'unavailable' }); }
+  try { await storageHealth(); res.json({ status: 'ok', engine: 'Synthetic Reality Engine', storage: 'ready', storageBackend: process.env.SUPABASE_URL ? 'postgresql' : 'json' }); } catch { res.status(503).json({ status: 'degraded', storage: 'unavailable' }); }
 });
 
 // In production, serve the static frontend
