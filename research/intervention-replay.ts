@@ -60,7 +60,7 @@ function applyIntervention(engine: SimulationEngine, event: InterventionEvent): 
     case 'weather.set': {
       const type = stringValue(p.type, 'type') as WeatherType;
       if (!WEATHER_TYPES.has(type)) throw new Error('Unsupported replay weather type.');
-      engine.triggerWeatherCycle(type);
+      engine.setWeather(type);
       return;
     }
     case 'disaster.trigger': {
